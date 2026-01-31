@@ -3,10 +3,11 @@ import { initDatabase, createSprint, addTask, getActiveSprint } from './lib/data
 import { parseBrainDump } from './lib/gemini'
 import LandingScreen from './components/LandingScreen'
 import SprintView from './components/SprintView'
+import HistoryView from './components/HistoryView'
 import type { Sprint } from './types'
 import './App.css'
 
-type AppView = 'landing' | 'sprint'
+type AppView = 'landing' | 'sprint' | 'history'
 
 function App() {
   const [dbReady, setDbReady] = useState(false)
@@ -78,6 +79,18 @@ function App() {
     setError(null)
   }, [])
 
+  const handleViewHistory = useCallback(() => {
+    setView('history')
+  }, [])
+
+  const handleHistoryBack = useCallback(() => {
+    if (activeSprint) {
+      setView('sprint')
+    } else {
+      setView('landing')
+    }
+  }, [activeSprint])
+
   // --- Render ---
 
   if (dbError) {
@@ -101,8 +114,18 @@ function App() {
     )
   }
 
+  if (view === 'history') {
+    return <HistoryView onBack={handleHistoryBack} />
+  }
+
   if (view === 'sprint' && activeSprint) {
-    return <SprintView sprint={activeSprint} onBack={handleBack} />
+    return (
+      <SprintView
+        sprint={activeSprint}
+        onBack={handleBack}
+        onViewHistory={handleViewHistory}
+      />
+    )
   }
 
   return (

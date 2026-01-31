@@ -8,6 +8,7 @@ import TaskCard from './TaskCard'
 interface SprintViewProps {
   sprint: Sprint
   onBack: () => void
+  onViewHistory: () => void
 }
 
 // Small celebration particles that float up from the progress bar
@@ -42,7 +43,7 @@ function CelebrationParticles() {
   )
 }
 
-export default function SprintView({ sprint, onBack }: SprintViewProps) {
+export default function SprintView({ sprint, onBack, onViewHistory }: SprintViewProps) {
   // ── Task status (optimistic local state) ──
   const [taskStatuses, setTaskStatuses] = useState<Record<string, 'pending' | 'completed'>>(() => {
     const initial: Record<string, 'pending' | 'completed'> = {}
@@ -271,9 +272,7 @@ export default function SprintView({ sprint, onBack }: SprintViewProps) {
             )}
 
             <button
-              onClick={() => {
-                // History view will be added in a later phase
-              }}
+              onClick={onViewHistory}
               className="w-full rounded-xl border border-calm-border/80 bg-white
                 py-3 px-6 text-sm font-medium text-calm-text-light
                 hover:bg-calm-border/10 hover:text-calm-text
