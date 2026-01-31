@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-calm-bg-start: #E8E0F0;
+  --color-calm-bg-end: #D6E5F5;
+  --color-calm-card: #FDFBF7;
+  --color-calm-text: #4A4A4A;
+  --color-calm-text-light: #7A7A7A;
+  --color-calm-border: #E5E5E5;
+  --color-calm-focus: #A8C5DA;
+  --color-calm-accent: #6B7BF7;
+  --color-calm-accent-soft: #8B97F8;
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
