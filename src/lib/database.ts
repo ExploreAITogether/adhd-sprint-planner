@@ -151,6 +151,17 @@ export async function updateTaskStatus(
   );
 }
 
+export async function updateTaskPrompt(
+  id: string,
+  generatedPrompt: string
+): Promise<void> {
+  const database = await getDb();
+  await database.execute(
+    'UPDATE tasks SET generated_prompt = $1 WHERE id = $2',
+    [generatedPrompt, id]
+  );
+}
+
 export async function getSprintHistory(): Promise<Sprint[]> {
   const database = await getDb();
 
