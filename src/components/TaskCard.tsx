@@ -3,10 +3,11 @@ import type { Task } from '../types'
 interface TaskCardProps {
   task: Task
   onToggle: (taskId: string) => void
+  onHelp: (task: Task) => void
   justCompleted?: boolean
 }
 
-export default function TaskCard({ task, onToggle, justCompleted }: TaskCardProps) {
+export default function TaskCard({ task, onToggle, onHelp, justCompleted }: TaskCardProps) {
   const isCompleted = task.status === 'completed'
 
   return (
@@ -100,24 +101,22 @@ export default function TaskCard({ task, onToggle, justCompleted }: TaskCardProp
       </div>
 
       {/* Help button */}
-      {!isCompleted && (
-        <div
-          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-          onClick={(e) => {
-            e.stopPropagation()
-            // Help functionality will be added in a later phase
-          }}
+      <div
+        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        onClick={(e) => {
+          e.stopPropagation()
+          onHelp(task)
+        }}
+      >
+        <span
+          className="inline-flex items-center gap-1 text-xs text-calm-text-light/70
+            bg-calm-border/30 rounded-lg px-2.5 py-1.5
+            hover:bg-calm-border/50 hover:text-calm-text-light
+            transition-colors duration-150"
         >
-          <span
-            className="inline-flex items-center gap-1 text-xs text-calm-text-light/70
-              bg-calm-border/30 rounded-lg px-2.5 py-1.5
-              hover:bg-calm-border/50 hover:text-calm-text-light
-              transition-colors duration-150"
-          >
-            <span className="text-sm">{'\u{1FA84}'}</span> Help
-          </span>
-        </div>
-      )}
+          <span className="text-sm">{'\u{1FA84}'}</span> Help
+        </span>
+      </div>
     </button>
   )
 }

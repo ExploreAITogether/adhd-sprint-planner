@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { format } from 'date-fns'
-import type { Sprint } from '../types'
+import type { Sprint, Task } from '../types'
 import { updateTaskStatus, updateSprintStatus, getSettings, updateSettings } from '../lib/database'
 import { playCompleteSound, playSprintCompleteSound } from '../lib/sounds'
 import TaskCard from './TaskCard'
+import HelpPromptModal from './HelpPromptModal'
 
 interface SprintViewProps {
   sprint: Sprint
@@ -63,6 +64,9 @@ export default function SprintView({ sprint, onBack, onViewHistory }: SprintView
   // ── Celebration ──
   const [celebrating, setCelebrating] = useState(false)
   const prevAllDone = useRef(false)
+
+  // ── Help modal ──
+  const [helpTask, setHelpTask] = useState<Task | null>(null)
 
   // Load sound preference on mount
   useEffect(() => {
@@ -168,6 +172,15 @@ export default function SprintView({ sprint, onBack, onViewHistory }: SprintView
     })
   }, [])
 
+  // ── Help handler ──
+  const handleHelp = useCallback((task: Task) => {
+    // Use current status from optimistic state
+    setHelpTask({
+      ...task,
+      status: taskStatuses[task.id] ?? task.status,
+    })
+  }, [taskStatuses])
+
   // ── Format the sprint date ──
   const sprintDate = (() => {
     try {
@@ -209,6 +222,7 @@ export default function SprintView({ sprint, onBack, onViewHistory }: SprintView
                 key={task.id}
                 task={{ ...task, status: taskStatuses[task.id] ?? task.status }}
                 onToggle={handleToggle}
+                onHelp={handleHelp}
                 justCompleted={justCompleted.has(task.id)}
               />
             ))}
@@ -283,6 +297,14 @@ export default function SprintView({ sprint, onBack, onViewHistory }: SprintView
           </div>
         </div>
       </div>
+
+      {/* Help prompt modal */}
+      {helpTask && (
+        <HelpPromptModal
+          task={helpTask}
+          onClose={() => setHelpTask(null)}
+        />
+      )}
     </div>
   )
 }
