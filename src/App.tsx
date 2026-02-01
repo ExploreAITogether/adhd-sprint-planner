@@ -57,10 +57,10 @@ function AppContent() {
       // 2. Create sprint in database
       const sprint = await createSprint(rawInput)
 
-      // 3. Add each task to the database
+      // 3. Add each task to the database with position
       const savedTasks = []
-      for (const task of parsedTasks) {
-        const saved = await addTask(sprint.id, task)
+      for (let i = 0; i < parsedTasks.length; i++) {
+        const saved = await addTask(sprint.id, parsedTasks[i], i)
         savedTasks.push(saved)
       }
 
@@ -96,6 +96,35 @@ function AppContent() {
           t.id === taskId ? { ...t, status: newStatus, completed_at: newStatus === 'completed' ? new Date().toISOString() : null } : t
         ),
       }
+    })
+  }, [])
+
+  const handleTaskEdit = useCallback((taskId: string, newTitle: string) => {
+    setActiveSprint((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        tasks: prev.tasks.map((t) =>
+          t.id === taskId ? { ...t, title: newTitle } : t
+        ),
+      }
+    })
+  }, [])
+
+  const handleTaskDelete = useCallback((taskId: string) => {
+    setActiveSprint((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        tasks: prev.tasks.filter((t) => t.id !== taskId),
+      }
+    })
+  }, [])
+
+  const handleTasksReorder = useCallback((reorderedTasks: Task[]) => {
+    setActiveSprint((prev) => {
+      if (!prev) return prev
+      return { ...prev, tasks: reorderedTasks }
     })
   }, [])
 
@@ -152,6 +181,9 @@ function AppContent() {
           onViewHistory={handleViewHistory}
           onOpenSettings={() => setShowSettings(true)}
           onTaskToggle={handleTaskToggle}
+          onTaskEdit={handleTaskEdit}
+          onTaskDelete={handleTaskDelete}
+          onTasksReorder={handleTasksReorder}
         />
       ) : (
         <LandingScreen

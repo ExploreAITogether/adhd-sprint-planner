@@ -15,6 +15,7 @@ export interface Task {
   status: 'pending' | 'completed';
   completed_at: string | null;
   generated_prompt: string | null;
+  position: number;
 }
 
 export interface Settings {

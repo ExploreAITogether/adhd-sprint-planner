@@ -1,7 +1,31 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { format } from 'date-fns'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import type { DragEndEvent } from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
 import type { Sprint, Task } from '../types'
-import { updateTaskStatus, updateSprintStatus, getSettings, updateSettings } from '../lib/database'
+import {
+  updateTaskStatus,
+  updateSprintStatus,
+  updateTaskTitle,
+  deleteTask as dbDeleteTask,
+  restoreTask,
+  updateTaskPositions,
+  getSettings,
+  updateSettings,
+} from '../lib/database'
 import { playCompleteSound, playSprintCompleteSound } from '../lib/sounds'
 import TaskCard from './TaskCard'
 import HelpPromptModal from './HelpPromptModal'
@@ -12,6 +36,9 @@ interface SprintViewProps {
   onViewHistory: () => void
   onOpenSettings?: () => void
   onTaskToggle?: (taskId: string, newStatus: 'pending' | 'completed') => void
+  onTaskEdit?: (taskId: string, newTitle: string) => void
+  onTaskDelete?: (taskId: string) => void
+  onTasksReorder?: (tasks: Task[]) => void
 }
 
 function CelebrationParticles() {
@@ -45,14 +72,53 @@ function CelebrationParticles() {
   )
 }
 
-export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettings, onTaskToggle }: SprintViewProps) {
-  const [taskStatuses, setTaskStatuses] = useState<Record<string, 'pending' | 'completed'>>(() => {
-    const initial: Record<string, 'pending' | 'completed'> = {}
-    for (const task of sprint.tasks) {
-      initial[task.id] = task.status
-    }
-    return initial
-  })
+function UndoToast({ message, onUndo, onDone }: { message: string; onUndo: () => void; onDone: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, 4000)
+    return () => clearTimeout(timer)
+  }, [onDone])
+
+  return (
+    <div
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+        rounded-2xl px-5 py-3 text-sm font-medium flex items-center gap-3"
+      style={{
+        backgroundColor: 'var(--t-toast-bg)',
+        border: '1px solid var(--t-toast-border)',
+        boxShadow: 'var(--t-toast-shadow)',
+        color: 'var(--t-text)',
+        animation: 'slide-up-fade 300ms ease-out',
+      }}
+    >
+      <span>{message}</span>
+      <button
+        onClick={onUndo}
+        className="text-sm font-semibold rounded-lg px-3 py-1 transition-colors duration-150"
+        style={{
+          color: 'var(--t-accent)',
+          backgroundColor: 'var(--t-border-light)',
+        }}
+      >
+        Undo
+      </button>
+    </div>
+  )
+}
+
+export default function SprintView({
+  sprint,
+  onBack,
+  onViewHistory,
+  onOpenSettings,
+  onTaskToggle,
+  onTaskEdit,
+  onTaskDelete,
+  onTasksReorder,
+}: SprintViewProps) {
+  // Ordered, mutable task list — single source of truth for the sprint view
+  const [tasks, setTasks] = useState<Task[]>(() =>
+    [...sprint.tasks].sort((a, b) => a.position - b.position)
+  )
 
   const [justCompleted, setJustCompleted] = useState<Set<string>>(new Set())
   const animTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
@@ -60,6 +126,19 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
   const [celebrating, setCelebrating] = useState(false)
   const prevAllDone = useRef(false)
   const [helpTask, setHelpTask] = useState<Task | null>(null)
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
+  const [deletedTaskInfo, setDeletedTaskInfo] = useState<{ task: Task; index: number } | null>(null)
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   useEffect(() => {
     getSettings().then((s) => setSoundEnabled(s.sound_enabled)).catch(() => {})
@@ -72,8 +151,8 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
     }
   }, [])
 
-  const completedCount = Object.values(taskStatuses).filter((s) => s === 'completed').length
-  const totalCount = sprint.tasks.length
+  const completedCount = tasks.filter((t) => t.status === 'completed').length
+  const totalCount = tasks.length
   const allDone = completedCount === totalCount && totalCount > 0
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
@@ -91,9 +170,14 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
     prevAllDone.current = allDone
   }, [allDone, soundEnabled])
 
+  // ── Task toggle ──
+
   const handleToggle = useCallback((taskId: string) => {
-    setTaskStatuses((prev) => {
-      const wasCompleted = prev[taskId] === 'completed'
+    setTasks((prev) => {
+      const task = prev.find((t) => t.id === taskId)
+      if (!task) return prev
+
+      const wasCompleted = task.status === 'completed'
       const newStatus = wasCompleted ? 'pending' : 'completed'
       const now = new Date().toISOString()
 
@@ -101,7 +185,6 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
         (err) => console.error('Failed to update task:', err)
       )
 
-      // Notify parent so activeSprint state stays in sync with DB
       onTaskToggle?.(taskId, newStatus)
 
       if (newStatus === 'completed') {
@@ -120,8 +203,8 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
         }, 700)
         animTimers.current.set(taskId, timer)
 
-        const allOthersComplete = Object.entries(prev).every(
-          ([id, status]) => id === taskId || status === 'completed'
+        const allOthersComplete = prev.every(
+          (t) => t.id === taskId || t.status === 'completed'
         )
         if (allOthersComplete) {
           updateSprintStatus(sprint.id, 'completed').catch((err) =>
@@ -141,9 +224,124 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
         )
       }
 
-      return { ...prev, [taskId]: newStatus }
+      return prev.map((t) =>
+        t.id === taskId
+          ? { ...t, status: newStatus, completed_at: newStatus === 'completed' ? now : null }
+          : t
+      )
     })
   }, [sprint.id, soundEnabled, onTaskToggle])
+
+  // ── Task edit ──
+
+  const handleStartEdit = useCallback((taskId: string) => {
+    setEditingTaskId(taskId)
+  }, [])
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingTaskId(null)
+  }, [])
+
+  const handleEdit = useCallback((taskId: string, newTitle: string) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, title: newTitle } : t))
+    )
+    updateTaskTitle(taskId, newTitle).catch((err) =>
+      console.error('Failed to update task title:', err)
+    )
+    onTaskEdit?.(taskId, newTitle)
+    setEditingTaskId(null)
+  }, [onTaskEdit])
+
+  // ── Task delete with undo ──
+
+  const handleDelete = useCallback((taskId: string) => {
+    // Play delete animation first
+    setDeletingTaskId(taskId)
+
+    setTimeout(() => {
+      setTasks((prev) => {
+        const index = prev.findIndex((t) => t.id === taskId)
+        if (index === -1) return prev
+
+        const task = prev[index]
+
+        // Delete from DB immediately
+        dbDeleteTask(taskId).catch((err) =>
+          console.error('Failed to delete task:', err)
+        )
+
+        // Notify parent
+        onTaskDelete?.(taskId)
+
+        // Store for potential undo
+        setDeletedTaskInfo({ task, index })
+
+        return prev.filter((t) => t.id !== taskId)
+      })
+
+      setDeletingTaskId(null)
+    }, 300) // Wait for slide-out animation
+  }, [onTaskDelete])
+
+  const handleUndo = useCallback(() => {
+    if (!deletedTaskInfo) return
+
+    const { task, index } = deletedTaskInfo
+
+    // Restore to DB
+    restoreTask(task).catch((err) =>
+      console.error('Failed to restore task:', err)
+    )
+
+    // Restore to local state at original position
+    setTasks((prev) => {
+      const restored = [...prev]
+      restored.splice(Math.min(index, prev.length), 0, task)
+      return restored
+    })
+
+    // Notify parent by providing full restored list
+    // Parent will get the task back via onTasksReorder
+    setTasks((prev) => {
+      onTasksReorder?.(prev)
+      return prev
+    })
+
+    setDeletedTaskInfo(null)
+  }, [deletedTaskInfo, onTasksReorder])
+
+  const handleUndoDone = useCallback(() => {
+    setDeletedTaskInfo(null)
+  }, [])
+
+  // ── Drag and drop reorder ──
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    setTasks((prev) => {
+      const oldIndex = prev.findIndex((t) => t.id === active.id)
+      const newIndex = prev.findIndex((t) => t.id === (over.id as string))
+      const reordered = arrayMove(prev, oldIndex, newIndex)
+
+      // Update positions
+      const positioned = reordered.map((t, i) => ({ ...t, position: i }))
+
+      // Save to DB
+      updateTaskPositions(positioned.map((t, i) => ({ id: t.id, position: i }))).catch(
+        (err) => console.error('Failed to update positions:', err)
+      )
+
+      // Notify parent
+      onTasksReorder?.(positioned)
+
+      return positioned
+    })
+  }, [onTasksReorder])
+
+  // ── Other handlers ──
 
   const toggleSound = useCallback(() => {
     setSoundEnabled((prev) => {
@@ -154,11 +352,8 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
   }, [])
 
   const handleHelp = useCallback((task: Task) => {
-    setHelpTask({
-      ...task,
-      status: taskStatuses[task.id] ?? task.status,
-    })
-  }, [taskStatuses])
+    setHelpTask(task)
+  }, [])
 
   const sprintDate = (() => {
     try {
@@ -167,6 +362,8 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
       return ''
     }
   })()
+
+  const taskIds = tasks.map((t) => t.id)
 
   return (
     <div
@@ -232,18 +429,41 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
             )}
           </div>
 
-          {/* Task list */}
-          <div className="flex flex-col gap-3">
-            {sprint.tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={{ ...task, status: taskStatuses[task.id] ?? task.status }}
-                onToggle={handleToggle}
-                onHelp={handleHelp}
-                justCompleted={justCompleted.has(task.id)}
-              />
-            ))}
-          </div>
+          {/* Task list with drag-and-drop */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+              <div className="flex flex-col gap-3">
+                {tasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onToggle={handleToggle}
+                    onHelp={handleHelp}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onStartEdit={handleStartEdit}
+                    onCancelEdit={handleCancelEdit}
+                    justCompleted={justCompleted.has(task.id)}
+                    isEditing={editingTaskId === task.id}
+                    isDeleting={deletingTaskId === task.id}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          {/* Empty state after all tasks deleted */}
+          {tasks.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-sm" style={{ color: 'var(--t-text-light)' }}>
+                No tasks remaining. Start a new sprint?
+              </p>
+            </div>
+          )}
 
           {/* Progress section */}
           <div className="mt-8">
@@ -256,38 +476,42 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
             >
               {celebrating
                 ? 'Nice sprint. All done. \u{2728}'
-                : `${completedCount} of ${totalCount} done`}
+                : totalCount > 0
+                  ? `${completedCount} of ${totalCount} done`
+                  : ''}
             </p>
 
             {/* Progress bar */}
-            <div
-              className="w-full h-2 rounded-full overflow-hidden relative"
-              style={{ backgroundColor: 'var(--t-progress-bg)' }}
-            >
+            {totalCount > 0 && (
               <div
-                className="h-full rounded-full transition-all duration-300 ease-out"
-                style={{
-                  width: `${progressPercent}%`,
-                  background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
-                }}
-              />
-              {celebrating && (
-                <div className="absolute inset-0 overflow-hidden rounded-full">
-                  <div
-                    className="w-full h-full"
-                    style={{
-                      background: 'linear-gradient(to right, transparent, var(--t-shimmer), transparent)',
-                      animation: 'shimmer 1.5s ease-in-out',
-                    }}
-                  />
-                </div>
-              )}
-            </div>
+                className="w-full h-2 rounded-full overflow-hidden relative"
+                style={{ backgroundColor: 'var(--t-progress-bg)' }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-300 ease-out"
+                  style={{
+                    width: `${progressPercent}%`,
+                    background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
+                  }}
+                />
+                {celebrating && (
+                  <div className="absolute inset-0 overflow-hidden rounded-full">
+                    <div
+                      className="w-full h-full"
+                      style={{
+                        background: 'linear-gradient(to right, transparent, var(--t-shimmer), transparent)',
+                        animation: 'shimmer 1.5s ease-in-out',
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}
           <div className="mt-8 flex flex-col gap-3">
-            {allDone && (
+            {(allDone || tasks.length === 0) && (
               <button
                 onClick={onBack}
                 className="w-full rounded-xl py-3.5 px-7 text-base font-medium text-white
@@ -336,6 +560,14 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
         <HelpPromptModal
           task={helpTask}
           onClose={() => setHelpTask(null)}
+        />
+      )}
+
+      {deletedTaskInfo && (
+        <UndoToast
+          message="Task removed"
+          onUndo={handleUndo}
+          onDone={handleUndoDone}
         />
       )}
     </div>
