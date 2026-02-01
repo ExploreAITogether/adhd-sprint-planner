@@ -1,8 +1,8 @@
 [package]
 name = "adhd-sprint-planner"
-version = "0.1.0"
-description = "ADHD Sprint Planner - calming task management"
-authors = ["you"]
+version = "1.0.0"
+description = "A calming task planner for ADHD brains"
+authors = ["ADHD Sprint Planner Contributors"]
 edition = "2021"
 
 [lib]

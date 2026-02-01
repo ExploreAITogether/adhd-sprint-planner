@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8E0F0"/>
+      <stop offset="100%" stop-color="#D6E5F5"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.35" cy="0.35" r="0.65">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.3)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#bg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#glow)"/>
+
+  <!-- Checkmark -->
+  <polyline
+    points="160,272 228,340 352,196"
+    fill="none"
+    stroke="white"
+    stroke-width="36"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Sparkle top-right -->
+  <g transform="translate(370, 140)" fill="white" opacity="0.9">
+    <path d="M0,-24 C2,-8 8,-2 24,0 C8,2 2,8 0,24 C-2,8 -8,2 -24,0 C-8,-2 -2,-8 0,-24Z"/>
+  </g>
+
+  <!-- Small sparkle -->
+  <g transform="translate(320, 108)" fill="white" opacity="0.6">
+    <path d="M0,-12 C1,-4 4,-1 12,0 C4,1 1,4 0,12 C-1,4 -4,1 -12,0 C-4,-1 -1,-4 0,-12Z"/>
+  </g>
+
+  <!-- Tiny sparkle dot -->
+  <circle cx="400" cy="168" r="5" fill="white" opacity="0.5"/>
+
+  <!-- Subtle accent ring -->
+  <circle cx="256" cy="264" r="120" fill="none" stroke="#7EB5D6" stroke-width="3" opacity="0.35"/>
+</svg>
