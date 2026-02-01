@@ -106,6 +106,40 @@ export async function getActiveSprint(): Promise<Sprint | null> {
   };
 }
 
+export async function getSprintById(id: string): Promise<Sprint | null> {
+  const database = await getDb();
+
+  const sprints = await database.select<
+    { id: string; created_at: string; status: string; raw_input: string }[]
+  >('SELECT * FROM sprints WHERE id = $1', [id]);
+
+  if (sprints.length === 0) return null;
+
+  const sprint = sprints[0];
+  const tasks = await database.select<
+    {
+      id: string;
+      sprint_id: string;
+      title: string;
+      emoji: string;
+      tags: string;
+      status: string;
+      completed_at: string | null;
+      generated_prompt: string | null;
+    }[]
+  >('SELECT * FROM tasks WHERE sprint_id = $1', [sprint.id]);
+
+  return {
+    ...sprint,
+    status: sprint.status as Sprint['status'],
+    tasks: tasks.map((t) => ({
+      ...t,
+      status: t.status as Task['status'],
+      tags: JSON.parse(t.tags),
+    })),
+  };
+}
+
 export async function updateSprintStatus(
   id: string,
   status: Sprint['status']
@@ -145,10 +179,12 @@ export async function updateTaskStatus(
   completedAt?: string
 ): Promise<void> {
   const database = await getDb();
+  console.log('[DB] updateTaskStatus:', { id, status, completedAt: completedAt ?? null });
   await database.execute(
     'UPDATE tasks SET status = $1, completed_at = $2 WHERE id = $3',
     [status, completedAt ?? null, id]
   );
+  console.log('[DB] updateTaskStatus: write confirmed for task', id);
 }
 
 export async function updateTaskPrompt(

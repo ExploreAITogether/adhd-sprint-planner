@@ -11,6 +11,7 @@ interface SprintViewProps {
   onBack: () => void
   onViewHistory: () => void
   onOpenSettings?: () => void
+  onTaskToggle?: (taskId: string, newStatus: 'pending' | 'completed') => void
 }
 
 function CelebrationParticles() {
@@ -44,7 +45,7 @@ function CelebrationParticles() {
   )
 }
 
-export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettings }: SprintViewProps) {
+export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettings, onTaskToggle }: SprintViewProps) {
   const [taskStatuses, setTaskStatuses] = useState<Record<string, 'pending' | 'completed'>>(() => {
     const initial: Record<string, 'pending' | 'completed'> = {}
     for (const task of sprint.tasks) {
@@ -100,6 +101,9 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
         (err) => console.error('Failed to update task:', err)
       )
 
+      // Notify parent so activeSprint state stays in sync with DB
+      onTaskToggle?.(taskId, newStatus)
+
       if (newStatus === 'completed') {
         setJustCompleted((s) => new Set(s).add(taskId))
         playCompleteSound(soundEnabled)
@@ -139,7 +143,7 @@ export default function SprintView({ sprint, onBack, onViewHistory, onOpenSettin
 
       return { ...prev, [taskId]: newStatus }
     })
-  }, [sprint.id, soundEnabled])
+  }, [sprint.id, soundEnabled, onTaskToggle])
 
   const toggleSound = useCallback(() => {
     setSoundEnabled((prev) => {

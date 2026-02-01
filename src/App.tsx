@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { initDatabase, createSprint, addTask, getActiveSprint } from './lib/database'
+import { initDatabase, createSprint, addTask, getActiveSprint, getSprintById } from './lib/database'
 import { parseBrainDump } from './lib/gemini'
 import { ThemeProvider } from './contexts/ThemeContext'
 import LandingScreen from './components/LandingScreen'
@@ -7,7 +7,7 @@ import SprintView from './components/SprintView'
 import HistoryView from './components/HistoryView'
 import SettingsModal from './components/SettingsModal'
 import ErrorBoundary from './components/ErrorBoundary'
-import type { Sprint } from './types'
+import type { Sprint, Task } from './types'
 import './App.css'
 
 type AppView = 'landing' | 'sprint' | 'history'
@@ -87,8 +87,28 @@ function AppContent() {
     setView('history')
   }, [])
 
-  const handleHistoryBack = useCallback(() => {
+  const handleTaskToggle = useCallback((taskId: string, newStatus: Task['status']) => {
+    setActiveSprint((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        tasks: prev.tasks.map((t) =>
+          t.id === taskId ? { ...t, status: newStatus, completed_at: newStatus === 'completed' ? new Date().toISOString() : null } : t
+        ),
+      }
+    })
+  }, [])
+
+  const handleHistoryBack = useCallback(async () => {
     if (activeSprint) {
+      try {
+        const refreshed = await getSprintById(activeSprint.id)
+        if (refreshed) {
+          setActiveSprint(refreshed)
+        }
+      } catch (err) {
+        console.error('Failed to refresh sprint:', err)
+      }
       setView('sprint')
     } else {
       setView('landing')
@@ -131,6 +151,7 @@ function AppContent() {
           onBack={handleBack}
           onViewHistory={handleViewHistory}
           onOpenSettings={() => setShowSettings(true)}
+          onTaskToggle={handleTaskToggle}
         />
       ) : (
         <LandingScreen
