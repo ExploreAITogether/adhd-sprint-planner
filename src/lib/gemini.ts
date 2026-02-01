@@ -134,6 +134,7 @@ export async function parseBrainDump(text: string): Promise<Omit<Task, 'id' | 's
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => '');
+
     if (response.status === 429) {
       throw new Error('Slow down! Take a breath and try again in a minute.');
     }

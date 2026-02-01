@@ -30,6 +30,12 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
   const [input, setInput] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [voiceError, setVoiceError] = useState<string | null>(null)
+  const [isMac, setIsMac] = useState(false)
+
+  // Detect OS for keyboard shortcut hint
+  useEffect(() => {
+    setIsMac(navigator.userAgent.indexOf('Mac') !== -1)
+  }, [])
 
   const {
     isSupported: voiceSupported,
@@ -75,7 +81,8 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && e.metaKey) {
+    // Support both Cmd+Enter (Mac) and Ctrl+Enter (Windows/Linux)
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       handleSubmit()
     }
@@ -359,7 +366,7 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
               className="px-1.5 py-0.5 rounded text-[11px] font-mono"
               style={{ backgroundColor: 'var(--t-kbd-bg)' }}
             >
-              &#x2318;
+              {isMac ? '⌘' : 'Ctrl'}
             </kbd>
             {' + '}
             <kbd
