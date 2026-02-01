@@ -24,7 +24,6 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
 
   const isCompleted = task.status === 'completed'
 
-  // Generate prompt on mount if no cached prompt
   useEffect(() => {
     if (task.generated_prompt) return
 
@@ -37,7 +36,6 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
         setPrompt(result)
         setState('success')
 
-        // Cache in database (fire-and-forget)
         updateTaskPrompt(task.id, result).catch((err) =>
           console.error('Failed to cache prompt:', err)
         )
@@ -52,7 +50,6 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
     return () => { cancelled = true }
   }, [task])
 
-  // Handle generating a new prompt (from cached-choice or regenerate)
   const handleGenerate = useCallback(async () => {
     setState('loading')
     setError('')
@@ -62,7 +59,6 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
       setPrompt(result)
       setState('success')
 
-      // Update cache
       updateTaskPrompt(task.id, result).catch((err) =>
         console.error('Failed to cache prompt:', err)
       )
@@ -72,12 +68,10 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
     }
   }, [task])
 
-  // Show cached prompt
   const handleShowCached = useCallback(() => {
     setState('success')
   }, [])
 
-  // Copy to clipboard
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(prompt)
@@ -85,25 +79,21 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
       if (copiedTimer.current) clearTimeout(copiedTimer.current)
       copiedTimer.current = setTimeout(() => setCopied(false), 2000)
     } catch {
-      // Fallback: select the text
       textAreaRef.current?.select()
     }
   }, [prompt])
 
-  // Cleanup timer
   useEffect(() => {
     return () => {
       if (copiedTimer.current) clearTimeout(copiedTimer.current)
     }
   }, [])
 
-  // Close with animation
   const handleClose = useCallback(() => {
     setIsClosing(true)
     setTimeout(onClose, 150)
   }, [onClose])
 
-  // Keyboard handlers
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -111,7 +101,6 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
         return
       }
 
-      // Enter or Cmd/Ctrl+C copies when prompt is visible
       if (state === 'success' && prompt) {
         if (e.key === 'Enter') {
           e.preventDefault()
@@ -128,14 +117,12 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [handleClose, handleCopy, state, prompt])
 
-  // Click outside to close
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
     if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
       handleClose()
     }
   }, [handleClose])
 
-  // Auto-resize text area
   useEffect(() => {
     if (textAreaRef.current && state === 'success') {
       const ta = textAreaRef.current
@@ -150,22 +137,30 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
         ${isClosing ? 'animate-[modal-fade-out_150ms_ease-in_forwards]' : 'animate-[modal-fade-in_200ms_ease-out]'}`}
       onClick={handleBackdropClick}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/30" />
+      <div className="absolute inset-0" style={{ backgroundColor: 'var(--t-modal-backdrop)' }} />
 
-      {/* Modal */}
       <div
         ref={modalRef}
-        className={`relative bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.12)]
-          w-full max-w-[500px] overflow-hidden
+        className={`relative rounded-2xl w-full max-w-[500px] overflow-hidden
           ${isClosing ? 'animate-[modal-scale-out_150ms_ease-in_forwards]' : 'animate-[modal-scale-in_200ms_ease-out]'}`}
+        style={{
+          backgroundColor: 'var(--t-modal-bg)',
+          boxShadow: 'var(--t-shadow-modal)',
+        }}
       >
-        {/* Close button */}
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center
-            rounded-full text-calm-text-light/60 hover:text-calm-text-light hover:bg-calm-border/30
-            transition-colors duration-150 z-10"
+            rounded-full transition-colors duration-150 z-10"
+          style={{ color: 'var(--t-text-faint)' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--t-text-light)'
+            e.currentTarget.style.backgroundColor = 'var(--t-border-light)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--t-text-faint)'
+            e.currentTarget.style.backgroundColor = 'transparent'
+          }}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="1" y1="1" x2="13" y2="13" />
@@ -174,32 +169,31 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
         </button>
 
         <div className="px-7 pt-7 pb-6">
-          {/* Header */}
-          <h2 className="text-lg font-medium text-calm-text pr-8">
+          <h2 className="text-lg font-medium pr-8" style={{ color: 'var(--t-text)' }}>
             {isCompleted
               ? 'Need help with something similar?'
               : "Here's a prompt to help with this:"}
           </h2>
 
-          {/* Task reminder */}
-          <p className="text-sm text-calm-text-light/70 mt-1.5 flex items-center gap-1.5">
+          <p className="text-sm mt-1.5 flex items-center gap-1.5" style={{ color: 'var(--t-text-light)' }}>
             <span className="text-base leading-none">{task.emoji}</span>
             <span className="truncate">{task.title}</span>
           </p>
 
-          {/* Content area */}
           <div className="mt-5">
-            {/* Loading state */}
             {state === 'loading' && (
               <div className="flex items-center justify-center py-10">
-                <div className="flex items-center gap-2 text-calm-text-light">
+                <div className="flex items-center gap-2" style={{ color: 'var(--t-text-light)' }}>
                   <span className="text-sm">Crafting a prompt</span>
                   <span className="flex gap-0.5">
                     {[0, 1, 2].map((i) => (
                       <span
                         key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-calm-text-light/50"
-                        style={{ animation: `dots-bounce 1s ease-in-out ${i * 0.15}s infinite` }}
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{
+                          backgroundColor: 'var(--t-text-faint)',
+                          animation: `dots-bounce 1s ease-in-out ${i * 0.15}s infinite`,
+                        }}
                       />
                     ))}
                   </span>
@@ -207,28 +201,33 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
               </div>
             )}
 
-            {/* Cached choice state */}
             {state === 'cached-choice' && (
               <div className="flex flex-col gap-3">
-                <p className="text-sm text-calm-text-light">
+                <p className="text-sm" style={{ color: 'var(--t-text-light)' }}>
                   You have a saved prompt for this task. What would you like to do?
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={handleShowCached}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-[#7EB5D6] to-[#6BA5C9]
-                      py-2.5 px-4 text-sm font-medium text-white
-                      hover:from-[#8FC0DE] hover:to-[#7BB2D3]
+                    className="flex-1 rounded-xl py-2.5 px-4 text-sm font-medium text-white
                       active:scale-[0.98] transition-all duration-200"
+                    style={{
+                      background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
+                    }}
                   >
                     Show saved prompt
                   </button>
                   <button
                     onClick={handleGenerate}
-                    className="flex-1 rounded-xl border border-calm-border/80 bg-white
-                      py-2.5 px-4 text-sm font-medium text-calm-text-light
-                      hover:bg-calm-border/10 hover:text-calm-text
+                    className="flex-1 rounded-xl py-2.5 px-4 text-sm font-medium
                       active:scale-[0.98] transition-all duration-200"
+                    style={{
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      borderColor: 'var(--t-border)',
+                      backgroundColor: 'var(--t-card-inner)',
+                      color: 'var(--t-text-light)',
+                    }}
                   >
                     Generate new
                   </button>
@@ -236,36 +235,39 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
               </div>
             )}
 
-            {/* Success state */}
             {state === 'success' && (
               <>
                 <textarea
                   ref={textAreaRef}
                   readOnly
                   value={prompt}
-                  className="w-full bg-[#F5F5F5] border border-calm-border/40 rounded-xl
-                    px-4 py-3.5 text-[13px] leading-relaxed text-calm-text
+                  className="w-full rounded-xl px-4 py-3.5 text-[13px] leading-relaxed
                     font-[ui-monospace,_SFMono-Regular,_Menlo,_monospace]
-                    resize-none focus:outline-none focus:ring-2 focus:ring-calm-focus/30
-                    selection:bg-calm-focus/20"
+                    resize-none focus:outline-none focus:ring-2"
+                  style={{
+                    backgroundColor: 'var(--t-code-bg)',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: 'var(--t-border-light)',
+                    color: 'var(--t-text)',
+                  }}
                   onClick={(e) => (e.target as HTMLTextAreaElement).select()}
                 />
 
-                {/* Usage hint */}
-                <p className="text-xs text-calm-text-light/50 mt-2.5 text-center">
+                <p className="text-xs mt-2.5 text-center" style={{ color: 'var(--t-text-faint)' }}>
                   Paste this into Claude, ChatGPT, or any AI assistant
                 </p>
 
-                {/* Action buttons */}
                 <div className="flex gap-3 mt-4">
                   <button
                     onClick={handleCopy}
-                    className={`flex-1 rounded-xl py-2.5 px-4 text-sm font-medium
-                      transition-all duration-200 active:scale-[0.98]
-                      ${copied
-                        ? 'bg-[#7BC67E] text-white'
-                        : 'bg-gradient-to-r from-[#7EB5D6] to-[#6BA5C9] text-white hover:from-[#8FC0DE] hover:to-[#7BB2D3]'
-                      }`}
+                    className="flex-1 rounded-xl py-2.5 px-4 text-sm font-medium
+                      transition-all duration-200 active:scale-[0.98] text-white"
+                    style={{
+                      background: copied
+                        ? 'var(--t-green)'
+                        : 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
+                    }}
                   >
                     {copied ? (
                       <span className="flex items-center justify-center gap-1.5">
@@ -280,43 +282,54 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
                   </button>
                   <button
                     onClick={handleGenerate}
-                    className="rounded-xl border border-calm-border/80 bg-white
-                      py-2.5 px-4 text-sm font-medium text-calm-text-light
-                      hover:bg-calm-border/10 hover:text-calm-text
+                    className="rounded-xl py-2.5 px-4 text-sm font-medium
                       active:scale-[0.98] transition-all duration-200"
+                    style={{
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      borderColor: 'var(--t-border)',
+                      backgroundColor: 'var(--t-card-inner)',
+                      color: 'var(--t-text-light)',
+                    }}
                     title="Generate a new prompt"
                   >
-                    ↻
+                    &#x21BB;
                   </button>
                 </div>
               </>
             )}
 
-            {/* Error state */}
             {state === 'error' && (
               <div className="flex flex-col items-center gap-3 py-4">
-                <p className="text-sm text-calm-text-light text-center">{error}</p>
+                <p className="text-sm text-center" style={{ color: 'var(--t-text-light)' }}>{error}</p>
                 {prompt && (
                   <>
-                    <p className="text-xs text-calm-text-light/60">Here's a generic prompt instead:</p>
+                    <p className="text-xs" style={{ color: 'var(--t-text-faint)' }}>Here's a generic prompt instead:</p>
                     <textarea
                       ref={textAreaRef}
                       readOnly
                       value={prompt}
-                      className="w-full bg-[#F5F5F5] border border-calm-border/40 rounded-xl
-                        px-4 py-3.5 text-[13px] leading-relaxed text-calm-text
+                      className="w-full rounded-xl px-4 py-3.5 text-[13px] leading-relaxed
                         font-[ui-monospace,_SFMono-Regular,_Menlo,_monospace]
                         resize-none focus:outline-none"
+                      style={{
+                        backgroundColor: 'var(--t-code-bg)',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        borderColor: 'var(--t-border-light)',
+                        color: 'var(--t-text)',
+                      }}
                       rows={3}
                     />
                   </>
                 )}
                 <button
                   onClick={handleGenerate}
-                  className="rounded-xl bg-gradient-to-r from-[#7EB5D6] to-[#6BA5C9]
-                    py-2.5 px-5 text-sm font-medium text-white
-                    hover:from-[#8FC0DE] hover:to-[#7BB2D3]
+                  className="rounded-xl py-2.5 px-5 text-sm font-medium text-white
                     active:scale-[0.98] transition-all duration-200"
+                  style={{
+                    background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
+                  }}
                 >
                   Try again
                 </button>

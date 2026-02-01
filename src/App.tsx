@@ -1,21 +1,25 @@
 import { useEffect, useState, useCallback } from 'react'
 import { initDatabase, createSprint, addTask, getActiveSprint } from './lib/database'
 import { parseBrainDump } from './lib/gemini'
+import { ThemeProvider } from './contexts/ThemeContext'
 import LandingScreen from './components/LandingScreen'
 import SprintView from './components/SprintView'
 import HistoryView from './components/HistoryView'
+import SettingsModal from './components/SettingsModal'
+import ErrorBoundary from './components/ErrorBoundary'
 import type { Sprint } from './types'
 import './App.css'
 
 type AppView = 'landing' | 'sprint' | 'history'
 
-function App() {
+function AppContent() {
   const [dbReady, setDbReady] = useState(false)
   const [dbError, setDbError] = useState<string | null>(null)
   const [view, setView] = useState<AppView>('landing')
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
     async function init() {
@@ -95,10 +99,12 @@ function App() {
 
   if (dbError) {
     return (
-      <div className="min-h-full bg-gradient-to-br from-calm-bg-start to-calm-bg-end flex items-center justify-center p-6">
-        <div className="bg-calm-card rounded-3xl shadow-lg px-10 py-10 max-w-md text-center">
-          <p className="text-red-500 text-sm">Something went wrong initializing the database.</p>
-          <p className="text-calm-text-light text-xs mt-2">{dbError}</p>
+      <div className="min-h-full flex items-center justify-center p-6"
+        style={{ background: 'linear-gradient(to bottom right, var(--t-bg-start), var(--t-bg-end))' }}>
+        <div className="rounded-3xl px-10 py-10 max-w-md text-center"
+          style={{ backgroundColor: 'var(--t-card)', boxShadow: 'var(--t-shadow-card)' }}>
+          <p className="text-sm" style={{ color: 'var(--t-red)' }}>Something went wrong initializing the database.</p>
+          <p className="text-xs mt-2" style={{ color: 'var(--t-text-light)' }}>{dbError}</p>
         </div>
       </div>
     )
@@ -106,35 +112,48 @@ function App() {
 
   if (!dbReady) {
     return (
-      <div className="min-h-full bg-gradient-to-br from-calm-bg-start to-calm-bg-end flex items-center justify-center">
-        <div className="text-calm-text-light text-sm animate-pulse">
+      <div className="min-h-full flex items-center justify-center"
+        style={{ background: 'linear-gradient(to bottom right, var(--t-bg-start), var(--t-bg-end))' }}>
+        <div className="text-sm animate-pulse" style={{ color: 'var(--t-text-light)' }}>
           Loading...
         </div>
       </div>
     )
   }
 
-  if (view === 'history') {
-    return <HistoryView onBack={handleHistoryBack} />
-  }
-
-  if (view === 'sprint' && activeSprint) {
-    return (
-      <SprintView
-        sprint={activeSprint}
-        onBack={handleBack}
-        onViewHistory={handleViewHistory}
-      />
-    )
-  }
-
   return (
-    <LandingScreen
-      onSubmit={handleSubmit}
-      isLoading={isLoading}
-      error={error}
-      onDismissError={() => setError(null)}
-    />
+    <>
+      {view === 'history' ? (
+        <HistoryView onBack={handleHistoryBack} onOpenSettings={() => setShowSettings(true)} />
+      ) : view === 'sprint' && activeSprint ? (
+        <SprintView
+          sprint={activeSprint}
+          onBack={handleBack}
+          onViewHistory={handleViewHistory}
+          onOpenSettings={() => setShowSettings(true)}
+        />
+      ) : (
+        <LandingScreen
+          onSubmit={handleSubmit}
+          isLoading={isLoading}
+          error={error}
+          onDismissError={() => setError(null)}
+          onOpenSettings={() => setShowSettings(true)}
+        />
+      )}
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+    </>
+  )
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
 
