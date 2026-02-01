@@ -125,9 +125,9 @@ export async function parseBrainDump(text: string): Promise<Omit<Task, 'id' | 's
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error('Request timed out. Please try again.');
+      throw new Error("That took too long. Let's try again.");
     }
-    throw new Error('Network error. Check your internet connection and try again.');
+    throw new Error("Couldn't connect to AI. Check your internet and try again.");
   } finally {
     clearTimeout(timeout);
   }
@@ -135,12 +135,12 @@ export async function parseBrainDump(text: string): Promise<Omit<Task, 'id' | 's
   if (!response.ok) {
     const errorBody = await response.text().catch(() => '');
     if (response.status === 429) {
-      throw new Error('Rate limited by Gemini API. Wait a moment and try again.');
+      throw new Error('Slow down! Take a breath and try again in a minute.');
     }
     if (response.status === 401 || response.status === 403) {
-      throw new Error('Invalid Gemini API key. Check your .env file.');
+      throw new Error("There's an issue with the AI setup. Check your API key in the .env file.");
     }
-    throw new Error(`Gemini API error (${response.status}): ${errorBody.slice(0, 200)}`);
+    throw new Error(`Something went wrong with the AI (${response.status}). ${errorBody.slice(0, 100)}`);
   }
 
   const data: GeminiResponse = await response.json();

@@ -14,47 +14,54 @@ export default function TaskCard({ task, onToggle, onHelp, justCompleted }: Task
     <button
       type="button"
       onClick={() => onToggle(task.id)}
-      className={`w-full flex items-center gap-4 rounded-2xl bg-white px-4 py-4 text-left
-        shadow-[0_1px_8px_rgba(0,0,0,0.04)] border border-calm-border/40
-        hover:shadow-[0_2px_12px_rgba(0,0,0,0.07)] hover:border-calm-border/60
-        focus:outline-none focus:ring-2 focus:ring-calm-focus/30 focus:ring-offset-1
+      className={`w-full flex items-center gap-4 rounded-2xl px-4 py-4 text-left
+        focus:outline-none focus:ring-2 focus:ring-offset-1
         group
         ${isCompleted ? 'opacity-60' : ''}
         ${justCompleted
           ? 'animate-[card-complete_400ms_ease-out]'
           : 'transition-all duration-200 ease-out'
         }`}
+      style={{
+        backgroundColor: 'var(--t-card-inner)',
+        boxShadow: 'var(--t-shadow-sm)',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: 'var(--t-border-light)',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = 'var(--t-shadow-sm-hover)'
+        e.currentTarget.style.borderColor = 'var(--t-border)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = 'var(--t-shadow-sm)'
+        e.currentTarget.style.borderColor = 'var(--t-border-light)'
+      }}
     >
       {/* Checkbox area */}
       <div className="shrink-0 relative w-6 h-6">
-        {/* Burst ring — only on fresh completion */}
         {justCompleted && (
           <div
-            className="absolute inset-[-4px] rounded-full border-2 border-[#7BC67E] pointer-events-none"
-            style={{ animation: 'check-burst 400ms ease-out forwards' }}
+            className="absolute inset-[-4px] rounded-full pointer-events-none"
+            style={{ border: '2px solid var(--t-green)', animation: 'check-burst 400ms ease-out forwards' }}
           />
         )}
 
-        {/* Checkbox circle */}
         <div
           className={`w-6 h-6 rounded-full flex items-center justify-center relative overflow-hidden
-            ${isCompleted
-              ? ''
-              : 'border-2 border-calm-border hover:border-calm-focus transition-colors duration-200'
-            }`}
+            ${isCompleted ? '' : 'transition-colors duration-200'}`}
+          style={isCompleted ? undefined : { border: '2px solid var(--t-border)' }}
         >
-          {/* Green fill */}
           {isCompleted && (
             <div
-              className="absolute inset-0 rounded-full bg-[#7BC67E]"
-              style={justCompleted
-                ? { animation: 'check-fill 350ms cubic-bezier(0.34,1.56,0.64,1) forwards' }
-                : undefined
-              }
+              className="absolute inset-0 rounded-full"
+              style={{
+                backgroundColor: 'var(--t-green)',
+                ...(justCompleted ? { animation: 'check-fill 350ms cubic-bezier(0.34,1.56,0.64,1) forwards' } : {}),
+              }}
             />
           )}
 
-          {/* Checkmark */}
           {isCompleted && (
             <svg
               className="w-3.5 h-3.5 text-white relative z-10"
@@ -82,19 +89,18 @@ export default function TaskCard({ task, onToggle, onHelp, justCompleted }: Task
         <span className="text-lg leading-none shrink-0">{task.emoji}</span>
         <span className="relative inline-flex items-center">
           <span
-            className={`text-[15px] leading-snug transition-colors duration-300
-              ${isCompleted ? 'text-calm-text-light/60' : 'text-calm-text'}`}
+            className="text-[15px] leading-snug transition-colors duration-300"
+            style={{ color: isCompleted ? 'var(--t-text-faint)' : 'var(--t-text)' }}
           >
             {task.title}
           </span>
-          {/* Strikethrough line */}
           {isCompleted && (
             <span
-              className="absolute left-0 right-0 top-1/2 h-[1.5px] bg-calm-text-light/50 origin-left"
-              style={justCompleted
-                ? { animation: 'strikethrough 300ms ease-out 100ms both' }
-                : undefined
-              }
+              className="absolute left-0 right-0 top-1/2 h-[1.5px] origin-left"
+              style={{
+                backgroundColor: 'var(--t-text-faint)',
+                ...(justCompleted ? { animation: 'strikethrough 300ms ease-out 100ms both' } : {}),
+              }}
             />
           )}
         </span>
@@ -109,10 +115,12 @@ export default function TaskCard({ task, onToggle, onHelp, justCompleted }: Task
         }}
       >
         <span
-          className="inline-flex items-center gap-1 text-xs text-calm-text-light/70
-            bg-calm-border/30 rounded-lg px-2.5 py-1.5
-            hover:bg-calm-border/50 hover:text-calm-text-light
+          className="inline-flex items-center gap-1 text-xs rounded-lg px-2.5 py-1.5
             transition-colors duration-150"
+          style={{
+            color: 'var(--t-text-light)',
+            backgroundColor: 'var(--t-border-light)',
+          }}
         >
           <span className="text-sm">{'\u{1FA84}'}</span> Help
         </span>

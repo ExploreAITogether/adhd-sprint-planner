@@ -23,6 +23,100 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* ── Phase 8: Theme system ── */
+
+  :root {
+    /* Light mode (default) */
+    --t-bg-start: #E8E0F0;
+    --t-bg-end: #D6E5F5;
+    --t-card: #FDFBF7;
+    --t-card-inner: #FFFFFF;
+    --t-text: #4A4A4A;
+    --t-text-light: #7A7A7A;
+    --t-text-faint: #AAAAAA;
+    --t-border: #E5E5E5;
+    --t-border-light: rgba(229, 229, 229, 0.4);
+    --t-focus: #A8C5DA;
+    --t-accent: #7EB5D6;
+    --t-accent-hover: #8FC0DE;
+    --t-accent-end: #6BA5C9;
+    --t-accent-end-hover: #7BB2D3;
+    --t-accent-shadow: rgba(107, 165, 201, 0.3);
+    --t-accent-shadow-hover: rgba(107, 165, 201, 0.4);
+    --t-green: #7BC67E;
+    --t-green-bg: rgba(123, 198, 126, 0.2);
+    --t-red: #E57373;
+    --t-red-bg: #FEF2F2;
+    --t-red-border: rgba(239, 68, 68, 0.2);
+    --t-red-text: rgba(220, 38, 38, 0.8);
+    --t-input-bg: #FFFFFF;
+    --t-code-bg: #F5F5F5;
+    --t-tag-bg: rgba(107, 123, 247, 0.08);
+    --t-tag-text: rgba(107, 123, 247, 0.7);
+    --t-modal-backdrop: rgba(0, 0, 0, 0.30);
+    --t-modal-bg: #FFFFFF;
+    --t-shadow-card: 0 4px 32px rgba(0, 0, 0, 0.06);
+    --t-shadow-sm: 0 1px 8px rgba(0, 0, 0, 0.04);
+    --t-shadow-sm-hover: 0 2px 12px rgba(0, 0, 0, 0.07);
+    --t-shadow-modal: 0 8px 40px rgba(0, 0, 0, 0.12);
+    --t-progress-bg: #E8E8E8;
+    --t-kbd-bg: rgba(229, 229, 229, 0.4);
+    --t-shimmer: rgba(255, 255, 255, 0.3);
+    --t-toast-bg: #FDFBF7;
+    --t-toast-border: rgba(229, 229, 229, 0.6);
+    --t-toast-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+    --t-neutral-btn-bg: #F0F0F0;
+    --t-neutral-btn-hover: #E5E5E5;
+  }
+
+  .theme-dark {
+    --t-bg-start: #1A1A2E;
+    --t-bg-end: #16213E;
+    --t-card: #252540;
+    --t-card-inner: #2E2E50;
+    --t-text: #E8E8E8;
+    --t-text-light: #A0A0B8;
+    --t-text-faint: #6A6A80;
+    --t-border: #3A3A55;
+    --t-border-light: rgba(58, 58, 85, 0.5);
+    --t-focus: #5A9BC7;
+    --t-accent: #5A9BC7;
+    --t-accent-hover: #6BAAD3;
+    --t-accent-end: #4A8AB7;
+    --t-accent-end-hover: #5A9BC7;
+    --t-accent-shadow: rgba(90, 155, 199, 0.3);
+    --t-accent-shadow-hover: rgba(90, 155, 199, 0.4);
+    --t-green: #7BC67E;
+    --t-green-bg: rgba(123, 198, 126, 0.15);
+    --t-red: #E57373;
+    --t-red-bg: rgba(229, 115, 115, 0.1);
+    --t-red-border: rgba(229, 115, 115, 0.2);
+    --t-red-text: #E8A0A0;
+    --t-input-bg: #2E2E50;
+    --t-code-bg: #1E1E38;
+    --t-tag-bg: rgba(90, 155, 199, 0.12);
+    --t-tag-text: rgba(90, 155, 199, 0.8);
+    --t-modal-backdrop: rgba(0, 0, 0, 0.50);
+    --t-modal-bg: #2A2A48;
+    --t-shadow-card: 0 4px 32px rgba(0, 0, 0, 0.25);
+    --t-shadow-sm: 0 1px 8px rgba(0, 0, 0, 0.15);
+    --t-shadow-sm-hover: 0 2px 12px rgba(0, 0, 0, 0.25);
+    --t-shadow-modal: 0 8px 40px rgba(0, 0, 0, 0.35);
+    --t-progress-bg: #3A3A55;
+    --t-kbd-bg: rgba(58, 58, 85, 0.5);
+    --t-shimmer: rgba(255, 255, 255, 0.1);
+    --t-toast-bg: #2A2A48;
+    --t-toast-border: rgba(58, 58, 85, 0.6);
+    --t-toast-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    --t-neutral-btn-bg: #3A3A55;
+    --t-neutral-btn-hover: #4A4A65;
+  }
+
+  /* Smooth theme transition */
+  html {
+    transition: background-color 200ms ease-in-out, color 200ms ease-in-out;
+  }
 }
 
 /* ── Phase 4: completion animations ── */
@@ -118,4 +212,12 @@
 @keyframes modal-scale-out {
   from { transform: scale(1); opacity: 1; }
   to { transform: scale(0.95); opacity: 0; }
+}
+
+/* ── Phase 8: settings toggle animation ── */
+
+@keyframes saved-check {
+  0% { opacity: 0; transform: scale(0.8); }
+  30% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
 }
