@@ -221,3 +221,18 @@
   30% { opacity: 1; transform: scale(1.1); }
   100% { opacity: 1; transform: scale(1); }
 }
+
+/* ── Phase 10: task management animations ── */
+
+@keyframes task-slide-out {
+  0% { opacity: 1; transform: translateX(0); max-height: 80px; }
+  70% { opacity: 0; transform: translateX(40px); max-height: 80px; }
+  100% { opacity: 0; transform: translateX(40px); max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; }
+}
+
+/* Touch devices: always show action buttons and drag handles */
+@media (hover: none) {
+  .task-action-touch {
+    opacity: 1 !important;
+  }
+}

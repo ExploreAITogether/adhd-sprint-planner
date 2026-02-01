@@ -51,6 +51,45 @@ export async function initDatabase(): Promise<void> {
     INSERT OR IGNORE INTO settings (id, sound_enabled, theme, export_path)
     VALUES (1, 1, 'system', '')
   `);
+
+  // Migration: add position column to tasks if not present
+  try {
+    await database.execute(
+      'ALTER TABLE tasks ADD COLUMN position INTEGER NOT NULL DEFAULT 0'
+    );
+    // Set initial positions for existing tasks based on rowid order
+    const existingTasks = await database.select<{ id: string; sprint_id: string }[]>(
+      'SELECT id, sprint_id FROM tasks ORDER BY rowid'
+    );
+    const sprintPositions = new Map<string, number>();
+    for (const task of existingTasks) {
+      const pos = sprintPositions.get(task.sprint_id) ?? 0;
+      await database.execute('UPDATE tasks SET position = $1 WHERE id = $2', [pos, task.id]);
+      sprintPositions.set(task.sprint_id, pos + 1);
+    }
+  } catch {
+    // Column already exists, ignore
+  }
+}
+
+interface TaskRow {
+  id: string;
+  sprint_id: string;
+  title: string;
+  emoji: string;
+  tags: string;
+  status: string;
+  completed_at: string | null;
+  generated_prompt: string | null;
+  position: number;
+}
+
+function mapTaskRow(row: TaskRow): Task {
+  return {
+    ...row,
+    status: row.status as Task['status'],
+    tags: JSON.parse(row.tags),
+  };
 }
 
 export async function createSprint(rawInput: string): Promise<Sprint> {
@@ -82,27 +121,37 @@ export async function getActiveSprint(): Promise<Sprint | null> {
   if (sprints.length === 0) return null;
 
   const sprint = sprints[0];
-  const tasks = await database.select<
-    {
-      id: string;
-      sprint_id: string;
-      title: string;
-      emoji: string;
-      tags: string;
-      status: string;
-      completed_at: string | null;
-      generated_prompt: string | null;
-    }[]
-  >('SELECT * FROM tasks WHERE sprint_id = $1', [sprint.id]);
+  const tasks = await database.select<TaskRow[]>(
+    'SELECT * FROM tasks WHERE sprint_id = $1 ORDER BY position ASC',
+    [sprint.id]
+  );
 
   return {
     ...sprint,
     status: sprint.status as Sprint['status'],
-    tasks: tasks.map((t) => ({
-      ...t,
-      status: t.status as Task['status'],
-      tags: JSON.parse(t.tags),
-    })),
+    tasks: tasks.map(mapTaskRow),
+  };
+}
+
+export async function getSprintById(id: string): Promise<Sprint | null> {
+  const database = await getDb();
+
+  const sprints = await database.select<
+    { id: string; created_at: string; status: string; raw_input: string }[]
+  >('SELECT * FROM sprints WHERE id = $1', [id]);
+
+  if (sprints.length === 0) return null;
+
+  const sprint = sprints[0];
+  const tasks = await database.select<TaskRow[]>(
+    'SELECT * FROM tasks WHERE sprint_id = $1 ORDER BY position ASC',
+    [sprint.id]
+  );
+
+  return {
+    ...sprint,
+    status: sprint.status as Sprint['status'],
+    tasks: tasks.map(mapTaskRow),
   };
 }
 
@@ -116,14 +165,15 @@ export async function updateSprintStatus(
 
 export async function addTask(
   sprintId: string,
-  task: Omit<Task, 'id' | 'sprint_id'>
+  task: Omit<Task, 'id' | 'sprint_id' | 'position'>,
+  position: number = 0
 ): Promise<Task> {
   const database = await getDb();
   const id = uuidv4();
 
   await database.execute(
-    `INSERT INTO tasks (id, sprint_id, title, emoji, tags, status, completed_at, generated_prompt)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    `INSERT INTO tasks (id, sprint_id, title, emoji, tags, status, completed_at, generated_prompt, position)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       id,
       sprintId,
@@ -133,10 +183,11 @@ export async function addTask(
       task.status,
       task.completed_at,
       task.generated_prompt,
+      position,
     ]
   );
 
-  return { id, sprint_id: sprintId, ...task };
+  return { id, sprint_id: sprintId, position, ...task };
 }
 
 export async function updateTaskStatus(
@@ -145,10 +196,53 @@ export async function updateTaskStatus(
   completedAt?: string
 ): Promise<void> {
   const database = await getDb();
+  console.log('[DB] updateTaskStatus:', { id, status, completedAt: completedAt ?? null });
   await database.execute(
     'UPDATE tasks SET status = $1, completed_at = $2 WHERE id = $3',
     [status, completedAt ?? null, id]
   );
+  console.log('[DB] updateTaskStatus: write confirmed for task', id);
+}
+
+export async function updateTaskTitle(
+  id: string,
+  title: string
+): Promise<void> {
+  const database = await getDb();
+  await database.execute('UPDATE tasks SET title = $1 WHERE id = $2', [title, id]);
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  const database = await getDb();
+  await database.execute('DELETE FROM tasks WHERE id = $1', [id]);
+}
+
+export async function restoreTask(task: Task): Promise<void> {
+  const database = await getDb();
+  await database.execute(
+    `INSERT INTO tasks (id, sprint_id, title, emoji, tags, status, completed_at, generated_prompt, position)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      task.id,
+      task.sprint_id,
+      task.title,
+      task.emoji,
+      JSON.stringify(task.tags),
+      task.status,
+      task.completed_at,
+      task.generated_prompt,
+      task.position,
+    ]
+  );
+}
+
+export async function updateTaskPositions(
+  taskPositions: { id: string; position: number }[]
+): Promise<void> {
+  const database = await getDb();
+  for (const { id, position } of taskPositions) {
+    await database.execute('UPDATE tasks SET position = $1 WHERE id = $2', [position, id]);
+  }
 }
 
 export async function updateTaskPrompt(
@@ -171,27 +265,15 @@ export async function getSprintHistory(): Promise<Sprint[]> {
 
   const result: Sprint[] = [];
   for (const sprint of sprints) {
-    const tasks = await database.select<
-      {
-        id: string;
-        sprint_id: string;
-        title: string;
-        emoji: string;
-        tags: string;
-        status: string;
-        completed_at: string | null;
-        generated_prompt: string | null;
-      }[]
-    >('SELECT * FROM tasks WHERE sprint_id = $1', [sprint.id]);
+    const tasks = await database.select<TaskRow[]>(
+      'SELECT * FROM tasks WHERE sprint_id = $1 ORDER BY position ASC',
+      [sprint.id]
+    );
 
     result.push({
       ...sprint,
       status: sprint.status as Sprint['status'],
-      tasks: tasks.map((t) => ({
-        ...t,
-        status: t.status as Task['status'],
-        tags: JSON.parse(t.tags),
-      })),
+      tasks: tasks.map(mapTaskRow),
     });
   }
 

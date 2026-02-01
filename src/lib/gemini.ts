@@ -90,7 +90,7 @@ function parseGeminiResponse(responseText: string): GeminiTaskResult[] {
     }));
 }
 
-export async function parseBrainDump(text: string): Promise<Omit<Task, 'id' | 'sprint_id'>[]> {
+export async function parseBrainDump(text: string): Promise<Omit<Task, 'id' | 'sprint_id' | 'position'>[]> {
   const apiKey = getApiKey();
 
   const body = {
