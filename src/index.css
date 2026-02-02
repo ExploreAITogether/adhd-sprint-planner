@@ -68,6 +68,11 @@
     --t-toast-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
     --t-neutral-btn-bg: #F0F0F0;
     --t-neutral-btn-hover: #E5E5E5;
+    --t-card-border: transparent;
+    --t-card-inner-border: rgba(229, 229, 229, 0.4);
+    --t-modal-border: transparent;
+    --t-accent-glow: rgba(126, 181, 214, 0.3);
+    --t-accent-glow-strong: rgba(126, 181, 214, 0.15);
   }
 
   .theme-dark {
@@ -111,6 +116,11 @@
     --t-toast-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
     --t-neutral-btn-bg: #3A3A55;
     --t-neutral-btn-hover: #4A4A65;
+    --t-card-border: rgba(100, 120, 150, 0.25);
+    --t-card-inner-border: rgba(110, 130, 160, 0.2);
+    --t-modal-border: rgba(100, 120, 150, 0.25);
+    --t-accent-glow: rgba(90, 155, 199, 0.45);
+    --t-accent-glow-strong: rgba(90, 155, 199, 0.25);
   }
 
   /* Smooth theme transition */
@@ -166,6 +176,21 @@
 @keyframes gentle-pulse {
   0%, 100% { box-shadow: 0 2px 12px rgba(107,165,201,0.3); }
   50% { box-shadow: 0 4px 24px rgba(107,165,201,0.5); }
+}
+
+@keyframes day-glow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px var(--t-accent-glow),
+      0 0 12px var(--t-accent-glow),
+      0 0 20px var(--t-accent-glow-strong);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px var(--t-accent-glow-strong),
+      0 0 8px var(--t-accent-glow-strong),
+      0 0 14px transparent;
+  }
 }
 
 /* ── Phase 5: voice recording animations ── */

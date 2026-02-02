@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { format } from 'date-fns'
+import { format, isToday, isYesterday, isTomorrow } from 'date-fns'
 import {
   DndContext,
   closestCenter,
@@ -436,11 +436,17 @@ export default function SprintView({
     }
   }, [addInputValue, tasks, sprint.id, onTaskAdd])
 
-  const sprintDate = (() => {
+  const sprintDateInfo = (() => {
     try {
-      return format(new Date(sprint.created_at), 'EEEE, MMMM d')
+      const date = new Date(sprint.created_at)
+      const dateStr = format(date, 'EEEE, MMM d')
+      let prefix: string | null = null
+      if (isToday(date)) prefix = 'Today'
+      else if (isYesterday(date)) prefix = 'Yesterday'
+      else if (isTomorrow(date)) prefix = 'Tomorrow'
+      return { prefix, dateStr }
     } catch {
-      return ''
+      return null
     }
   })()
 
@@ -459,7 +465,11 @@ export default function SprintView({
 
         <div
           className="rounded-3xl px-8 py-8 sm:px-10 sm:py-10 relative"
-          style={{ backgroundColor: 'var(--t-card)', boxShadow: 'var(--t-shadow-card)' }}
+          style={{
+            backgroundColor: 'var(--t-card)',
+            boxShadow: 'var(--t-shadow-card)',
+            border: '1px solid var(--t-card-border)',
+          }}
         >
           {/* Top-right buttons: sound + settings */}
           <div className="absolute top-5 right-5 flex items-center gap-1">
@@ -517,9 +527,17 @@ export default function SprintView({
             <h1 className="text-2xl font-medium" style={{ color: 'var(--t-text)' }}>
               Your Sprint
             </h1>
-            {sprintDate && (
+            {sprintDateInfo && (
               <p className="text-sm mt-1.5" style={{ color: 'var(--t-text-light)' }}>
-                {sprintDate}
+                {sprintDateInfo.prefix && (
+                  <>
+                    <span className="font-medium" style={{ color: 'var(--t-accent)' }}>
+                      {sprintDateInfo.prefix}
+                    </span>
+                    <span> · </span>
+                  </>
+                )}
+                {sprintDateInfo.dateStr}
               </p>
             )}
           </div>

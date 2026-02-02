@@ -231,7 +231,7 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
       <div className="w-full max-w-[700px]">
         <div
           className="rounded-3xl px-8 py-8 sm:px-10 sm:py-10 relative"
-          style={{ backgroundColor: 'var(--t-card)', boxShadow: 'var(--t-shadow-card)' }}
+          style={{ backgroundColor: 'var(--t-card)', boxShadow: 'var(--t-shadow-card)', border: '1px solid var(--t-card-border)' }}
         >
           {/* Settings gear - top right */}
           {onOpenSettings && (

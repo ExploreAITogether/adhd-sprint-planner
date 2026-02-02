@@ -146,6 +146,7 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
         style={{
           backgroundColor: 'var(--t-modal-bg)',
           boxShadow: 'var(--t-shadow-modal)',
+          border: '1px solid var(--t-modal-border)',
         }}
       >
         <button
