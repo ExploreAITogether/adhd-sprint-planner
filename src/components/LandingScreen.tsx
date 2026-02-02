@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useSpeechRecognition, type SpeechError } from '../hooks/useSpeechRecognition'
+import type { WeekDay, DayTheme } from '../types'
+import WeeklyStrip from './WeeklyStrip'
 
 interface LandingScreenProps {
   onSubmit: (input: string) => void
@@ -7,6 +9,9 @@ interface LandingScreenProps {
   error?: string | null
   onDismissError?: () => void
   onOpenSettings?: () => void
+  weekDays?: WeekDay[]
+  onDayClick?: (dayOfWeek: number) => void
+  todayTheme?: DayTheme | null
 }
 
 const MAX_INPUT_LENGTH = 5000
@@ -26,7 +31,7 @@ function voiceErrorMessage(error: SpeechError): string {
   }
 }
 
-export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings }: LandingScreenProps) {
+export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings, weekDays, onDayClick, todayTheme }: LandingScreenProps) {
   const [input, setInput] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [voiceError, setVoiceError] = useState<string | null>(null)
@@ -128,6 +133,11 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
       style={{ background: 'linear-gradient(to bottom right, var(--t-bg-start), var(--t-bg-end))' }}
     >
       <div className="w-full max-w-xl">
+        {/* Weekly day strip above the card */}
+        {weekDays && weekDays.length > 0 && onDayClick && (
+          <WeeklyStrip weekDays={weekDays} onDayClick={onDayClick} />
+        )}
+
         {/* Main card */}
         <div
           className="rounded-3xl px-8 py-8 sm:px-10 sm:py-10 relative"
@@ -157,13 +167,24 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
             </button>
           )}
 
-          {/* Heading */}
-          <h1
-            className="text-2xl font-medium text-center mb-8 leading-relaxed"
-            style={{ color: 'var(--t-text)' }}
-          >
-            What do you need to get done?
-          </h1>
+          {/* Today's theme + Heading */}
+          <div className="text-center mb-8">
+            {todayTheme && (
+              <p
+                className="mb-2 flex items-center justify-center gap-1.5"
+                style={{ color: 'var(--t-text-light)', animation: 'slide-up-fade 300ms ease-out' }}
+              >
+                <span className="text-[28px] leading-none">{todayTheme.emoji}</span>
+                <span className="text-sm font-medium">{todayTheme.name}</span>
+              </p>
+            )}
+            <h1
+              className="text-2xl font-medium leading-relaxed"
+              style={{ color: 'var(--t-text)' }}
+            >
+              What do you need to get done?
+            </h1>
+          </div>
 
           {/* Error message */}
           {displayError && (

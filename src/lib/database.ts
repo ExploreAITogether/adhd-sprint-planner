@@ -1,6 +1,6 @@
 import Database from '@tauri-apps/plugin-sql';
 import { v4 as uuidv4 } from 'uuid';
-import type { Sprint, Task, Settings } from '../types';
+import type { Sprint, Task, Settings, DayTheme, WeekDay } from '../types';
 
 let db: Database | null = null;
 
@@ -50,6 +50,16 @@ export async function initDatabase(): Promise<void> {
   await database.execute(`
     INSERT OR IGNORE INTO settings (id, sound_enabled, theme, export_path)
     VALUES (1, 1, 'system', '')
+  `);
+
+  await database.execute(`
+    CREATE TABLE IF NOT EXISTS day_themes (
+      id TEXT PRIMARY KEY,
+      day_of_week INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      emoji TEXT NOT NULL,
+      UNIQUE(day_of_week)
+    )
   `);
 
   // Migration: add position column to tasks if not present
@@ -327,4 +337,121 @@ export async function updateSettings(
       values
     );
   }
+}
+
+// ── Day Themes ──
+
+export async function getDayThemes(): Promise<(DayTheme | null)[]> {
+  const database = await getDb();
+
+  const rows = await database.select<DayTheme[]>(
+    'SELECT * FROM day_themes ORDER BY day_of_week ASC'
+  );
+
+  const themesByDay = new Map<number, DayTheme>();
+  for (const row of rows) {
+    themesByDay.set(row.day_of_week, row);
+  }
+
+  // Return array of 7 entries (index 0 = Monday/day 1, index 6 = Sunday/day 7)
+  return Array.from({ length: 7 }, (_, i) => themesByDay.get(i + 1) ?? null);
+}
+
+export async function getDayTheme(dayOfWeek: number): Promise<DayTheme | null> {
+  const database = await getDb();
+
+  const rows = await database.select<DayTheme[]>(
+    'SELECT * FROM day_themes WHERE day_of_week = $1',
+    [dayOfWeek]
+  );
+
+  return rows.length > 0 ? rows[0] : null;
+}
+
+export async function setDayTheme(
+  dayOfWeek: number,
+  name: string,
+  emoji: string
+): Promise<DayTheme> {
+  const database = await getDb();
+  const id = uuidv4();
+
+  // Upsert: replace if day_of_week already exists (UNIQUE constraint)
+  await database.execute(
+    `INSERT INTO day_themes (id, day_of_week, name, emoji)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT(day_of_week) DO UPDATE SET name = $3, emoji = $4, id = $1`,
+    [id, dayOfWeek, name, emoji]
+  );
+
+  return { id, day_of_week: dayOfWeek, name, emoji };
+}
+
+export async function clearDayTheme(dayOfWeek: number): Promise<void> {
+  const database = await getDb();
+  await database.execute(
+    'DELETE FROM day_themes WHERE day_of_week = $1',
+    [dayOfWeek]
+  );
+}
+
+// ── Week Days Helper ──
+
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+export async function getWeekDays(): Promise<WeekDay[]> {
+  const today = new Date();
+  // getDay() returns 0=Sun, 1=Mon, ..., 6=Sat
+  // Convert to Monday-based: Mon=0, Tue=1, ..., Sun=6
+  const jsDay = today.getDay();
+  const mondayOffset = jsDay === 0 ? 6 : jsDay - 1;
+
+  // Calculate Monday of the current week
+  const monday = new Date(today);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(today.getDate() - mondayOffset);
+
+  const themes = await getDayThemes();
+
+  // Calculate week boundaries for scoped query
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 7); // midnight after Sunday
+
+  const mondayISO = monday.toISOString();
+  const sundayISO = sunday.toISOString();
+
+  // Query only tasks completed within this week
+  const database = await getDb();
+  const completedTasks = await database.select<{ completed_at: string }[]>(
+    "SELECT completed_at FROM tasks WHERE status = 'completed' AND completed_at IS NOT NULL AND completed_at >= $1 AND completed_at < $2",
+    [mondayISO, sundayISO]
+  );
+
+  // Build a set of date strings (YYYY-MM-DD) that have completed tasks
+  const completedDates = new Set<string>();
+  for (const task of completedTasks) {
+    const d = new Date(task.completed_at);
+    const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    completedDates.add(dateKey);
+  }
+
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const weekDays: WeekDay[] = [];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+    weekDays.push({
+      dayOfWeek: i + 1,     // 1=Monday, 7=Sunday
+      label: DAY_LABELS[i],
+      date,
+      theme: themes[i],
+      isToday: dateKey === todayStr,
+      hasCompletedTasks: completedDates.has(dateKey),
+    });
+  }
+
+  return weekDays;
 }

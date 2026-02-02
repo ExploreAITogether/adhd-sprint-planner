@@ -1,14 +1,18 @@
 import { useEffect, useState, useCallback } from 'react'
-import { initDatabase, createSprint, addTask, getActiveSprint, getSprintById } from './lib/database'
+import { initDatabase, createSprint, addTask, getActiveSprint, getSprintById, getWeekDays, setDayTheme, clearDayTheme } from './lib/database'
 import { parseBrainDump } from './lib/gemini'
 import { ThemeProvider } from './contexts/ThemeContext'
 import LandingScreen from './components/LandingScreen'
 import SprintView from './components/SprintView'
 import HistoryView from './components/HistoryView'
 import SettingsModal from './components/SettingsModal'
+import WeeklyStrip from './components/WeeklyStrip'
+import ThemeEditorModal from './components/ThemeEditorModal'
 import ErrorBoundary from './components/ErrorBoundary'
-import type { Sprint, Task } from './types'
+import type { Sprint, Task, WeekDay } from './types'
 import './App.css'
+
+const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 type AppView = 'landing' | 'sprint' | 'history'
 
@@ -20,6 +24,18 @@ function AppContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [weekDays, setWeekDays] = useState<WeekDay[]>([])
+  const [themeEditorOpen, setThemeEditorOpen] = useState(false)
+  const [selectedDayForEdit, setSelectedDayForEdit] = useState<number | null>(null)
+
+  const refreshWeekDays = useCallback(async () => {
+    try {
+      const days = await getWeekDays()
+      setWeekDays(days)
+    } catch (err) {
+      console.error('Failed to load week days:', err)
+    }
+  }, [])
 
   useEffect(() => {
     async function init() {
@@ -33,6 +49,10 @@ function AppContent() {
           setActiveSprint(existing)
           setView('sprint')
         }
+
+        // Load week data
+        const days = await getWeekDays()
+        setWeekDays(days)
       } catch (err) {
         setDbError(String(err))
       }
@@ -97,7 +117,9 @@ function AppContent() {
         ),
       }
     })
-  }, [])
+    // Refresh week strip so completed-task checkmark updates
+    refreshWeekDays()
+  }, [refreshWeekDays])
 
   const handleTaskEdit = useCallback((taskId: string, newTitle: string) => {
     setActiveSprint((prev) => {
@@ -144,6 +166,48 @@ function AppContent() {
     }
   }, [activeSprint])
 
+  // ── Day theme handlers ──
+
+  const handleDayClick = useCallback((dayOfWeek: number) => {
+    setSelectedDayForEdit(dayOfWeek)
+    setThemeEditorOpen(true)
+  }, [])
+
+  const handleThemeSave = useCallback(async (emoji: string, name: string) => {
+    if (selectedDayForEdit === null) return
+    try {
+      await setDayTheme(selectedDayForEdit, name, emoji)
+      await refreshWeekDays()
+    } catch (err) {
+      console.error('Failed to save day theme:', err)
+    }
+    setThemeEditorOpen(false)
+    setSelectedDayForEdit(null)
+  }, [selectedDayForEdit, refreshWeekDays])
+
+  const handleThemeClear = useCallback(async () => {
+    if (selectedDayForEdit === null) return
+    try {
+      await clearDayTheme(selectedDayForEdit)
+      await refreshWeekDays()
+    } catch (err) {
+      console.error('Failed to clear day theme:', err)
+    }
+    setThemeEditorOpen(false)
+    setSelectedDayForEdit(null)
+  }, [selectedDayForEdit, refreshWeekDays])
+
+  const handleThemeEditorClose = useCallback(() => {
+    setThemeEditorOpen(false)
+    setSelectedDayForEdit(null)
+  }, [])
+
+  const selectedDayTheme = selectedDayForEdit !== null
+    ? weekDays.find((d) => d.dayOfWeek === selectedDayForEdit)?.theme ?? null
+    : null
+
+  const todayTheme = weekDays.find((d) => d.isToday)?.theme ?? null
+
   // --- Render ---
 
   if (dbError) {
@@ -184,6 +248,9 @@ function AppContent() {
           onTaskEdit={handleTaskEdit}
           onTaskDelete={handleTaskDelete}
           onTasksReorder={handleTasksReorder}
+          todayTheme={todayTheme}
+          weekDays={weekDays}
+          onDayClick={handleDayClick}
         />
       ) : (
         <LandingScreen
@@ -192,10 +259,23 @@ function AppContent() {
           error={error}
           onDismissError={() => setError(null)}
           onOpenSettings={() => setShowSettings(true)}
+          weekDays={weekDays}
+          onDayClick={handleDayClick}
+          todayTheme={todayTheme}
         />
       )}
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
+      <ThemeEditorModal
+        isOpen={themeEditorOpen}
+        dayOfWeek={selectedDayForEdit ?? 1}
+        dayName={selectedDayForEdit !== null ? DAY_NAMES[selectedDayForEdit - 1] : ''}
+        currentTheme={selectedDayTheme}
+        onSave={handleThemeSave}
+        onClear={handleThemeClear}
+        onClose={handleThemeEditorClose}
+      />
     </>
   )
 }

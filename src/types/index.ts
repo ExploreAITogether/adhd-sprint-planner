@@ -23,3 +23,19 @@ export interface Settings {
   theme: 'light' | 'dark' | 'system';
   export_path: string;
 }
+
+export interface DayTheme {
+  id: string;
+  day_of_week: number;  // 1-7, Monday=1
+  name: string;
+  emoji: string;
+}
+
+export interface WeekDay {
+  dayOfWeek: number;        // 1-7
+  label: string;            // "M", "T", "W", etc.
+  date: Date;               // Actual date for this week
+  theme: DayTheme | null;   // null = open day
+  isToday: boolean;
+  hasCompletedTasks: boolean;  // Derived from sprint history
+}

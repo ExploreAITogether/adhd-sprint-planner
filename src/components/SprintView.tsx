@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
-import type { Sprint, Task } from '../types'
+import type { Sprint, Task, DayTheme, WeekDay } from '../types'
 import {
   updateTaskStatus,
   updateSprintStatus,
@@ -29,6 +29,7 @@ import {
 import { playCompleteSound, playSprintCompleteSound } from '../lib/sounds'
 import TaskCard from './TaskCard'
 import HelpPromptModal from './HelpPromptModal'
+import WeeklyStrip from './WeeklyStrip'
 
 interface SprintViewProps {
   sprint: Sprint
@@ -39,6 +40,9 @@ interface SprintViewProps {
   onTaskEdit?: (taskId: string, newTitle: string) => void
   onTaskDelete?: (taskId: string) => void
   onTasksReorder?: (tasks: Task[]) => void
+  todayTheme?: DayTheme | null
+  weekDays?: WeekDay[]
+  onDayClick?: (dayOfWeek: number) => void
 }
 
 function CelebrationParticles() {
@@ -114,6 +118,9 @@ export default function SprintView({
   onTaskEdit,
   onTaskDelete,
   onTasksReorder,
+  todayTheme,
+  weekDays,
+  onDayClick,
 }: SprintViewProps) {
   // Ordered, mutable task list — single source of truth for the sprint view
   const [tasks, setTasks] = useState<Task[]>(() =>
@@ -371,6 +378,11 @@ export default function SprintView({
       style={{ background: 'linear-gradient(to bottom right, var(--t-bg-start), var(--t-bg-end))' }}
     >
       <div className="w-full max-w-[600px]">
+        {/* Weekly day strip above the card */}
+        {weekDays && weekDays.length > 0 && onDayClick && (
+          <WeeklyStrip weekDays={weekDays} onDayClick={onDayClick} />
+        )}
+
         <div
           className="rounded-3xl px-8 py-8 sm:px-10 sm:py-10 relative"
           style={{ backgroundColor: 'var(--t-card)', boxShadow: 'var(--t-shadow-card)' }}
@@ -419,6 +431,15 @@ export default function SprintView({
 
           {/* Header */}
           <div className="text-center mb-8">
+            {todayTheme && (
+              <p
+                className="mb-2 flex items-center justify-center gap-1.5"
+                style={{ color: 'var(--t-text-light)', animation: 'slide-up-fade 300ms ease-out' }}
+              >
+                <span className="text-[28px] leading-none">{todayTheme.emoji}</span>
+                <span className="text-sm font-medium">{todayTheme.name}</span>
+              </p>
+            )}
             <h1 className="text-2xl font-medium" style={{ color: 'var(--t-text)' }}>
               Your Sprint
             </h1>
