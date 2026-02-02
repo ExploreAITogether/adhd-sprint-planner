@@ -432,7 +432,10 @@ export default function SprintView({
           {/* Header */}
           <div className="text-center mb-8">
             {todayTheme && (
-              <p className="mb-2 flex items-center justify-center gap-1.5" style={{ color: 'var(--t-text-light)' }}>
+              <p
+                className="mb-2 flex items-center justify-center gap-1.5"
+                style={{ color: 'var(--t-text-light)', animation: 'slide-up-fade 300ms ease-out' }}
+              >
                 <span className="text-[28px] leading-none">{todayTheme.emoji}</span>
                 <span className="text-sm font-medium">{todayTheme.name}</span>
               </p>

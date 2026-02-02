@@ -261,6 +261,7 @@ function AppContent() {
           onOpenSettings={() => setShowSettings(true)}
           weekDays={weekDays}
           onDayClick={handleDayClick}
+          todayTheme={todayTheme}
         />
       )}
 

@@ -67,6 +67,34 @@ export default function ThemeEditorModal({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [isOpen, handleClose])
 
+  // Focus trap
+  useEffect(() => {
+    if (!isOpen || isClosing) return
+
+    function handleTab(e: KeyboardEvent) {
+      if (e.key !== 'Tab' || !modalRef.current) return
+
+      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+        'button, input, [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleTab)
+    return () => document.removeEventListener('keydown', handleTab)
+  }, [isOpen, isClosing])
+
   // Backdrop click
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
     if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
@@ -86,6 +114,9 @@ export default function ThemeEditorModal({
 
       <div
         ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="theme-editor-title"
         className={`relative rounded-2xl w-full max-w-[380px] overflow-hidden
           ${isClosing ? 'animate-[modal-scale-out_150ms_ease-in_forwards]' : 'animate-[modal-scale-in_200ms_ease-out]'}`}
         style={{
@@ -96,6 +127,7 @@ export default function ThemeEditorModal({
         {/* Close button */}
         <button
           onClick={handleClose}
+          aria-label="Close"
           className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center
             rounded-full transition-colors duration-150 z-10"
           style={{ color: 'var(--t-text-faint)' }}
@@ -115,7 +147,7 @@ export default function ThemeEditorModal({
         </button>
 
         <div className="px-7 pt-7 pb-6">
-          <h2 className="text-lg font-medium pr-8" style={{ color: 'var(--t-text)' }}>
+          <h2 id="theme-editor-title" className="text-lg font-medium pr-8" style={{ color: 'var(--t-text)' }}>
             {dayName}
           </h2>
           <p className="text-sm mt-1" style={{ color: 'var(--t-text-light)' }}>
@@ -126,12 +158,14 @@ export default function ThemeEditorModal({
             {/* Emoji input */}
             <div>
               <label
+                htmlFor="theme-emoji"
                 className="block text-xs font-medium mb-1.5"
                 style={{ color: 'var(--t-text-light)' }}
               >
                 Emoji
               </label>
               <input
+                id="theme-emoji"
                 ref={emojiRef}
                 type="text"
                 value={emoji}
@@ -145,7 +179,6 @@ export default function ThemeEditorModal({
                   borderStyle: 'solid',
                   borderColor: 'var(--t-border)',
                   color: 'var(--t-text)',
-                  focusRingColor: 'var(--t-focus)',
                 }}
                 maxLength={4}
               />
@@ -154,12 +187,14 @@ export default function ThemeEditorModal({
             {/* Name input */}
             <div>
               <label
+                htmlFor="theme-name"
                 className="block text-xs font-medium mb-1.5"
                 style={{ color: 'var(--t-text-light)' }}
               >
                 Theme name
               </label>
               <input
+                id="theme-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -178,7 +213,6 @@ export default function ThemeEditorModal({
                   borderStyle: 'solid',
                   borderColor: 'var(--t-border)',
                   color: 'var(--t-text)',
-                  focusRingColor: 'var(--t-focus)',
                 }}
                 maxLength={50}
               />

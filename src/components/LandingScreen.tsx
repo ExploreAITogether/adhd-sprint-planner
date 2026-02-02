@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useSpeechRecognition, type SpeechError } from '../hooks/useSpeechRecognition'
-import type { WeekDay } from '../types'
+import type { WeekDay, DayTheme } from '../types'
 import WeeklyStrip from './WeeklyStrip'
 
 interface LandingScreenProps {
@@ -11,6 +11,7 @@ interface LandingScreenProps {
   onOpenSettings?: () => void
   weekDays?: WeekDay[]
   onDayClick?: (dayOfWeek: number) => void
+  todayTheme?: DayTheme | null
 }
 
 const MAX_INPUT_LENGTH = 5000
@@ -30,7 +31,7 @@ function voiceErrorMessage(error: SpeechError): string {
   }
 }
 
-export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings, weekDays, onDayClick }: LandingScreenProps) {
+export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings, weekDays, onDayClick, todayTheme }: LandingScreenProps) {
   const [input, setInput] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [voiceError, setVoiceError] = useState<string | null>(null)
@@ -166,13 +167,24 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
             </button>
           )}
 
-          {/* Heading */}
-          <h1
-            className="text-2xl font-medium text-center mb-8 leading-relaxed"
-            style={{ color: 'var(--t-text)' }}
-          >
-            What do you need to get done?
-          </h1>
+          {/* Today's theme + Heading */}
+          <div className="text-center mb-8">
+            {todayTheme && (
+              <p
+                className="mb-2 flex items-center justify-center gap-1.5"
+                style={{ color: 'var(--t-text-light)', animation: 'slide-up-fade 300ms ease-out' }}
+              >
+                <span className="text-[28px] leading-none">{todayTheme.emoji}</span>
+                <span className="text-sm font-medium">{todayTheme.name}</span>
+              </p>
+            )}
+            <h1
+              className="text-2xl font-medium leading-relaxed"
+              style={{ color: 'var(--t-text)' }}
+            >
+              What do you need to get done?
+            </h1>
+          </div>
 
           {/* Error message */}
           {displayError && (

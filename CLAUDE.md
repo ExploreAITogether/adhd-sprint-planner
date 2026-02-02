@@ -17,10 +17,12 @@ src/
 ├── index.css                # Tailwind config, CSS custom properties for theming
 ├── App.css                  # App-specific styles
 ├── components/
-│   ├── LandingScreen.tsx    # Brain dump textarea + voice input
-│   ├── SprintView.tsx       # Active sprint with drag-to-reorder tasks
+│   ├── LandingScreen.tsx    # Brain dump textarea + voice input + today theme
+│   ├── SprintView.tsx       # Active sprint with drag-to-reorder tasks + today theme
 │   ├── TaskCard.tsx         # Individual task with complete/edit/delete
 │   ├── HistoryView.tsx      # Past sprints, search, tag filter, markdown export
+│   ├── WeeklyStrip.tsx      # Horizontal Mon-Sun strip with theme emojis + completion dots
+│   ├── ThemeEditorModal.tsx # Modal to set/edit/clear a day's theme
 │   ├── HelpPromptModal.tsx  # AI-generated help prompts for tasks
 │   ├── SettingsModal.tsx    # Theme, sound, export path settings
 │   └── ErrorBoundary.tsx    # Global error handler
@@ -47,7 +49,7 @@ src-tauri/
 
 ## Key Files
 
-- **`src/App.tsx`** — Main app state (active sprint, current view, loading/error). Routes between `LandingScreen`, `SprintView`, and `HistoryView`. Handles brain dump submission → Gemini parse → sprint creation flow.
+- **`src/App.tsx`** — Main app state (active sprint, current view, weekly themes, loading/error). Routes between `LandingScreen`, `SprintView`, and `HistoryView`. Manages day theme editing flow and weekly strip data refresh.
 - **`src/lib/database.ts`** — All database operations. Singleton `getDb()` pattern. Schema creation in `initDatabase()`. CRUD for sprints, tasks, settings, and day themes.
 - **`src/lib/gemini.ts`** — Calls Gemini 2.0 Flash to parse brain dump text into 1-5 tasks with title, emoji, and tags. API key from `VITE_GEMINI_API_KEY` env var.
 - **`src/lib/promptGenerator.ts`** — Generates AI-friendly help prompts for individual tasks. Results cached in the `tasks.generated_prompt` column.
@@ -140,6 +142,11 @@ npm run tauri build  # Production build of desktop app
 npm run lint         # ESLint
 ```
 
-## Recent / In-Progress Changes
+## Weekly Day Themes Feature
 
-- **Weekly day themes (data layer complete, UI pending):** New `day_themes` table and CRUD functions (`getDayThemes`, `getDayTheme`, `setDayTheme`, `clearDayTheme`) plus `getWeekDays()` helper that returns the current Mon-Sun week with theme data, today marker, and per-day task completion status. UI for editing/displaying themes is not yet built.
+Fully implemented end-to-end. Lets users assign an emoji + name theme to each weekday.
+
+- **Data:** `day_themes` table, CRUD functions (`getDayThemes`, `getDayTheme`, `setDayTheme`, `clearDayTheme`), `getWeekDays()` helper (scoped to current Mon-Sun week)
+- **UI:** `WeeklyStrip` (horizontal day buttons above main card on landing + sprint views), `ThemeEditorModal` (set/edit/clear per-day theme)
+- **Integration:** App.tsx manages state, refreshes on mount + theme save/clear + task toggle. Today's theme shown above heading on both LandingScreen and SprintView.
+- **Accessibility:** aria-labels on day buttons, focus trap in modal, dialog role, labeled inputs, 44px min tap targets
