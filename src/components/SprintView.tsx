@@ -23,6 +23,7 @@ import {
   deleteTask as dbDeleteTask,
   restoreTask,
   updateTaskPositions,
+  addTask,
   getSettings,
   updateSettings,
 } from '../lib/database'
@@ -40,6 +41,7 @@ interface SprintViewProps {
   onTaskEdit?: (taskId: string, newTitle: string) => void
   onTaskDelete?: (taskId: string) => void
   onTasksReorder?: (tasks: Task[]) => void
+  onTaskAdd?: (task: Task) => void
   todayTheme?: DayTheme | null
   weekDays?: WeekDay[]
   onDayClick?: (dayOfWeek: number) => void
@@ -109,6 +111,31 @@ function UndoToast({ message, onUndo, onDone }: { message: string; onUndo: () =>
   )
 }
 
+const KEYWORD_EMOJI_MAP: [RegExp, string][] = [
+  [/\b(email|reply|inbox|mail)\b/i, '📧'],
+  [/\b(call|phone|dial)\b/i, '📞'],
+  [/\b(write|draft|blog|post)\b/i, '✏️'],
+  [/\b(fix|bug|debug)\b/i, '🔧'],
+  [/\b(clean|organize|tidy|declutter)\b/i, '🧹'],
+  [/\b(exercise|run|gym|workout|walk)\b/i, '🏃'],
+  [/\b(read|book|article)\b/i, '📖'],
+  [/\b(buy|shop|purchase|order)\b/i, '🛒'],
+  [/\b(cook|meal|food|dinner|lunch)\b/i, '🍳'],
+  [/\b(meet|meeting|sync)\b/i, '🤝'],
+  [/\b(plan|schedule|calendar)\b/i, '📅'],
+  [/\b(learn|study|course)\b/i, '📚'],
+  [/\b(design|sketch|draw)\b/i, '🎨'],
+  [/\b(code|develop|program)\b/i, '💻'],
+  [/\b(test|check|review)\b/i, '✅'],
+]
+
+function getEmojiForTask(title: string): string {
+  for (const [pattern, emoji] of KEYWORD_EMOJI_MAP) {
+    if (pattern.test(title)) return emoji
+  }
+  return '📌'
+}
+
 export default function SprintView({
   sprint,
   onBack,
@@ -118,6 +145,7 @@ export default function SprintView({
   onTaskEdit,
   onTaskDelete,
   onTasksReorder,
+  onTaskAdd,
   todayTheme,
   weekDays,
   onDayClick,
@@ -136,6 +164,9 @@ export default function SprintView({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
   const [deletedTaskInfo, setDeletedTaskInfo] = useState<{ task: Task; index: number } | null>(null)
+  const [showAddInput, setShowAddInput] = useState(false)
+  const [addInputValue, setAddInputValue] = useState('')
+  const addInputRef = useRef<HTMLInputElement>(null)
 
   // DnD sensors
   const sensors = useSensors(
@@ -362,6 +393,49 @@ export default function SprintView({
     setHelpTask(task)
   }, [])
 
+  // ── Add task ──
+
+  const MAX_TASKS = 5
+
+  const handleOpenAddInput = useCallback(() => {
+    setShowAddInput(true)
+    // Focus after render
+    setTimeout(() => addInputRef.current?.focus(), 0)
+  }, [])
+
+  const handleCloseAddInput = useCallback(() => {
+    setShowAddInput(false)
+    setAddInputValue('')
+  }, [])
+
+  const handleAddTaskSubmit = useCallback(async () => {
+    const title = addInputValue.trim()
+    if (!title) return
+    if (tasks.length >= MAX_TASKS) return
+
+    const emoji = getEmojiForTask(title)
+    const nextPosition = tasks.length > 0 ? Math.max(...tasks.map((t) => t.position)) + 1 : 0
+
+    try {
+      const savedTask = await addTask(sprint.id, {
+        title,
+        emoji,
+        tags: [],
+        status: 'pending',
+        completed_at: null,
+        generated_prompt: null,
+      }, nextPosition)
+
+      setTasks((prev) => [...prev, savedTask])
+      onTaskAdd?.(savedTask)
+      setAddInputValue('')
+      // Keep input open for adding more
+      addInputRef.current?.focus()
+    } catch (err) {
+      console.error('Failed to add task:', err)
+    }
+  }, [addInputValue, tasks, sprint.id, onTaskAdd])
+
   const sprintDate = (() => {
     try {
       return format(new Date(sprint.created_at), 'EEEE, MMMM d')
@@ -476,6 +550,73 @@ export default function SprintView({
               </div>
             </SortableContext>
           </DndContext>
+
+          {/* Add task */}
+          {tasks.length < MAX_TASKS && (
+            <div className="mt-3">
+              {showAddInput ? (
+                <div
+                  className="flex items-center gap-2 rounded-xl px-4 py-2.5"
+                  style={{
+                    backgroundColor: 'var(--t-card-inner)',
+                    border: '1px solid var(--t-border)',
+                  }}
+                >
+                  <input
+                    ref={addInputRef}
+                    type="text"
+                    value={addInputValue}
+                    onChange={(e) => setAddInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddTaskSubmit()
+                      if (e.key === 'Escape') handleCloseAddInput()
+                    }}
+                    onBlur={(e) => {
+                      // Don't close if clicking the Add button
+                      if (e.relatedTarget?.getAttribute('data-add-btn')) return
+                      if (!addInputValue.trim()) handleCloseAddInput()
+                    }}
+                    placeholder="What else?"
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
+                    style={{ color: 'var(--t-text)', caretColor: 'var(--t-accent)' }}
+                    maxLength={120}
+                  />
+                  <button
+                    data-add-btn="true"
+                    onClick={handleAddTaskSubmit}
+                    disabled={!addInputValue.trim()}
+                    className="text-xs font-medium rounded-lg px-3 py-1.5 transition-opacity duration-150"
+                    style={{
+                      color: 'white',
+                      background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
+                      opacity: addInputValue.trim() ? 1 : 0.4,
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleOpenAddInput}
+                  className="w-full text-left text-sm py-2 px-1 transition-colors duration-150 rounded-lg"
+                  style={{ color: 'var(--t-text-faint)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = 'var(--t-text-light)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--t-text-faint)'
+                  }}
+                >
+                  + Add task
+                </button>
+              )}
+            </div>
+          )}
+          {tasks.length >= MAX_TASKS && (
+            <p className="mt-3 text-center text-xs" style={{ color: 'var(--t-text-faint)' }}>
+              Sprint full — {MAX_TASKS} tasks max
+            </p>
+          )}
 
           {/* Empty state after all tasks deleted */}
           {tasks.length === 0 && (
