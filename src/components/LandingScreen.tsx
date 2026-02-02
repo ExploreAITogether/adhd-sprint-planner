@@ -141,7 +141,7 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
         {/* Main card */}
         <div
           className="rounded-3xl px-8 py-8 sm:px-10 sm:py-10 relative"
-          style={{ backgroundColor: 'var(--t-card)', boxShadow: 'var(--t-shadow-card)' }}
+          style={{ backgroundColor: 'var(--t-card)', boxShadow: 'var(--t-shadow-card)', border: '1px solid var(--t-card-border)' }}
         >
           {/* Settings gear */}
           {onOpenSettings && (

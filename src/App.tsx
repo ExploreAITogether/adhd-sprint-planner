@@ -150,6 +150,13 @@ function AppContent() {
     })
   }, [])
 
+  const handleTaskAdd = useCallback((task: Task) => {
+    setActiveSprint((prev) => {
+      if (!prev) return prev
+      return { ...prev, tasks: [...prev.tasks, task] }
+    })
+  }, [])
+
   const handleHistoryBack = useCallback(async () => {
     if (activeSprint) {
       try {
@@ -248,6 +255,7 @@ function AppContent() {
           onTaskEdit={handleTaskEdit}
           onTaskDelete={handleTaskDelete}
           onTasksReorder={handleTasksReorder}
+          onTaskAdd={handleTaskAdd}
           todayTheme={todayTheme}
           weekDays={weekDays}
           onDayClick={handleDayClick}

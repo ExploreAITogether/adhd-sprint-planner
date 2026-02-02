@@ -84,7 +84,7 @@ export default function TaskCard({
         boxShadow: isDragging ? '0 8px 24px rgba(0,0,0,0.15)' : 'var(--t-shadow-sm)',
         borderWidth: '1px',
         borderStyle: 'solid',
-        borderColor: isDragging ? 'var(--t-accent)' : 'var(--t-border-light)',
+        borderColor: isDragging ? 'var(--t-accent)' : 'var(--t-card-inner-border)',
       }}
       className={`w-full flex items-center gap-3 rounded-2xl px-3 py-4 sm:px-4 text-left
         group relative
@@ -104,7 +104,7 @@ export default function TaskCard({
       onMouseLeave={(e) => {
         if (!isDragging) {
           e.currentTarget.style.boxShadow = 'var(--t-shadow-sm)'
-          e.currentTarget.style.borderColor = 'var(--t-border-light)'
+          e.currentTarget.style.borderColor = 'var(--t-card-inner-border)'
         }
       }}
     >

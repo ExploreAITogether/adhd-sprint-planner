@@ -31,7 +31,10 @@ export default function WeeklyStrip({ weekDays, onDayClick }: WeeklyStripProps) 
                 ? 'var(--t-card)'
                 : 'transparent',
               boxShadow: day.isToday
-                ? '0 0 0 1.5px var(--t-accent), var(--t-shadow-sm)'
+                ? '0 0 0 2px var(--t-accent-glow), 0 0 12px var(--t-accent-glow), 0 0 20px var(--t-accent-glow-strong)'
+                : 'none',
+              animation: day.isToday
+                ? 'day-glow-pulse 3.5s ease-in-out infinite'
                 : 'none',
             }}
             onMouseEnter={(e) => {
@@ -49,7 +52,7 @@ export default function WeeklyStrip({ weekDays, onDayClick }: WeeklyStripProps) 
           >
             {/* Day letter */}
             <span
-              className="text-xs font-medium leading-none"
+              className={`text-xs leading-none ${day.isToday ? 'font-semibold' : 'font-medium'}`}
               style={{
                 color: day.isToday
                   ? 'var(--t-accent)'
