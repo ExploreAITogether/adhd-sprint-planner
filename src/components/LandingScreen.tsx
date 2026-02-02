@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useSpeechRecognition, type SpeechError } from '../hooks/useSpeechRecognition'
+import type { WeekDay } from '../types'
+import WeeklyStrip from './WeeklyStrip'
 
 interface LandingScreenProps {
   onSubmit: (input: string) => void
@@ -7,6 +9,8 @@ interface LandingScreenProps {
   error?: string | null
   onDismissError?: () => void
   onOpenSettings?: () => void
+  weekDays?: WeekDay[]
+  onDayClick?: (dayOfWeek: number) => void
 }
 
 const MAX_INPUT_LENGTH = 5000
@@ -26,7 +30,7 @@ function voiceErrorMessage(error: SpeechError): string {
   }
 }
 
-export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings }: LandingScreenProps) {
+export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings, weekDays, onDayClick }: LandingScreenProps) {
   const [input, setInput] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [voiceError, setVoiceError] = useState<string | null>(null)
@@ -128,6 +132,11 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
       style={{ background: 'linear-gradient(to bottom right, var(--t-bg-start), var(--t-bg-end))' }}
     >
       <div className="w-full max-w-xl">
+        {/* Weekly day strip above the card */}
+        {weekDays && weekDays.length > 0 && onDayClick && (
+          <WeeklyStrip weekDays={weekDays} onDayClick={onDayClick} />
+        )}
+
         {/* Main card */}
         <div
           className="rounded-3xl px-8 py-8 sm:px-10 sm:py-10 relative"
