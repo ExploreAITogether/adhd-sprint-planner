@@ -117,7 +117,9 @@ function AppContent() {
         ),
       }
     })
-  }, [])
+    // Refresh week strip so completed-task checkmark updates
+    refreshWeekDays()
+  }, [refreshWeekDays])
 
   const handleTaskEdit = useCallback((taskId: string, newTitle: string) => {
     setActiveSprint((prev) => {

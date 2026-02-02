@@ -413,10 +413,18 @@ export async function getWeekDays(): Promise<WeekDay[]> {
 
   const themes = await getDayThemes();
 
-  // Query all tasks with a completed_at timestamp to check per-day completion
+  // Calculate week boundaries for scoped query
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 7); // midnight after Sunday
+
+  const mondayISO = monday.toISOString();
+  const sundayISO = sunday.toISOString();
+
+  // Query only tasks completed within this week
   const database = await getDb();
   const completedTasks = await database.select<{ completed_at: string }[]>(
-    "SELECT completed_at FROM tasks WHERE status = 'completed' AND completed_at IS NOT NULL"
+    "SELECT completed_at FROM tasks WHERE status = 'completed' AND completed_at IS NOT NULL AND completed_at >= $1 AND completed_at < $2",
+    [mondayISO, sundayISO]
   );
 
   // Build a set of date strings (YYYY-MM-DD) that have completed tasks
