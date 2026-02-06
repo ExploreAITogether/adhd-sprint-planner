@@ -290,13 +290,43 @@ export async function restoreTask(task: Task): Promise<void> {
   );
 }
 
-export async function updateTaskPositions(
+async function writeTaskPositions(
   taskPositions: { id: string; position: number }[]
 ): Promise<void> {
   const database = await getDb();
   for (const { id, position } of taskPositions) {
     await database.execute('UPDATE tasks SET position = $1 WHERE id = $2', [position, id]);
   }
+}
+
+let positionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingPositions: { id: string; position: number }[] | null = null;
+let positionResolvers: { resolve: () => void; reject: (err: unknown) => void }[] = [];
+
+export function updateTaskPositions(
+  taskPositions: { id: string; position: number }[]
+): Promise<void> {
+  // Always keep the latest positions — earlier pending values are stale
+  pendingPositions = taskPositions;
+
+  return new Promise<void>((resolve, reject) => {
+    positionResolvers.push({ resolve, reject });
+
+    if (positionDebounceTimer) clearTimeout(positionDebounceTimer);
+
+    positionDebounceTimer = setTimeout(() => {
+      const positions = pendingPositions!;
+      const resolvers = positionResolvers;
+      pendingPositions = null;
+      positionResolvers = [];
+      positionDebounceTimer = null;
+
+      writeTaskPositions(positions).then(
+        () => resolvers.forEach((r) => r.resolve()),
+        (err) => resolvers.forEach((r) => r.reject(err))
+      );
+    }, 300);
+  });
 }
 
 export async function updateTaskPrompt(
@@ -310,15 +340,23 @@ export async function updateTaskPrompt(
   );
 }
 
-export async function getSprintHistory(): Promise<Sprint[]> {
+export async function getSprintHistory(
+  limit: number = 50,
+  offset: number = 0
+): Promise<{ sprints: Sprint[]; hasMore: boolean }> {
   const database = await getDb();
 
+  // Fetch one extra to determine if there are more pages
   const sprints = await database.select<SprintRow[]>(
-    'SELECT * FROM sprints ORDER BY created_at DESC'
+    'SELECT * FROM sprints ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+    [limit + 1, offset]
   );
 
+  const hasMore = sprints.length > limit;
+  const page = hasMore ? sprints.slice(0, limit) : sprints;
+
   const result: Sprint[] = [];
-  for (const sprint of sprints) {
+  for (const sprint of page) {
     const tasks = await database.select<TaskRow[]>(
       'SELECT * FROM tasks WHERE sprint_id = $1 ORDER BY position ASC',
       [sprint.id]
@@ -331,7 +369,7 @@ export async function getSprintHistory(): Promise<Sprint[]> {
     });
   }
 
-  return result;
+  return { sprints: result, hasMore };
 }
 
 export async function getSettings(): Promise<Settings> {

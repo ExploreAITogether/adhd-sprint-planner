@@ -141,9 +141,13 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 
 // ── Main component ──
 
+const PAGE_SIZE = 50
+
 export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps) {
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -153,9 +157,10 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
   const loadHistory = useCallback(() => {
     setLoading(true)
     setLoadError(null)
-    getSprintHistory()
-      .then((history) => {
+    getSprintHistory(PAGE_SIZE, 0)
+      .then(({ sprints: history, hasMore: more }) => {
         setSprints(history)
+        setHasMore(more)
       })
       .catch((err) => {
         console.error('Failed to load history:', err)
@@ -163,6 +168,20 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
       })
       .finally(() => setLoading(false))
   }, [])
+
+  const loadMore = useCallback(() => {
+    setLoadingMore(true)
+    getSprintHistory(PAGE_SIZE, sprints.length)
+      .then(({ sprints: more, hasMore: stillMore }) => {
+        setSprints((prev) => [...prev, ...more])
+        setHasMore(stillMore)
+      })
+      .catch((err) => {
+        console.error('Failed to load more history:', err)
+        setToast('Failed to load more. Please try again.')
+      })
+      .finally(() => setLoadingMore(false))
+  }, [sprints.length])
 
   useEffect(() => {
     loadHistory()
@@ -518,6 +537,34 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
                   )}
                 </div>
               ))}
+
+            {/* Load more button */}
+            {!loading && !loadError && hasMore && !debouncedQuery && (
+              <div className="text-center py-4">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="text-sm font-medium rounded-xl px-6 py-2.5
+                    transition-all duration-200"
+                  style={{
+                    color: 'var(--t-text-light)',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: 'var(--t-border)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--t-border-light)'
+                    e.currentTarget.style.color = 'var(--t-text)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                    e.currentTarget.style.color = 'var(--t-text-light)'
+                  }}
+                >
+                  {loadingMore ? 'Loading...' : 'Load more'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
