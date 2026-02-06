@@ -411,7 +411,7 @@ export default function SprintView({
 
     setTasks((prev) => {
       const oldIndex = prev.findIndex((t) => t.id === active.id)
-      const newIndex = prev.findIndex((t) => t.id === (over.id as string))
+      const newIndex = prev.findIndex((t) => t.id === String(over.id))
       const reordered = arrayMove(prev, oldIndex, newIndex)
 
       // Update positions

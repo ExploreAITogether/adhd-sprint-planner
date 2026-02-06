@@ -74,11 +74,11 @@ function parseGeminiResponse(responseText: string): GeminiTaskResult[] {
   // Validate and sanitize each task
   return parsed.tasks
     .filter(
-      (t: unknown): t is GeminiTaskResult =>
-        typeof t === 'object' &&
-        t !== null &&
-        typeof (t as GeminiTaskResult).title === 'string' &&
-        (t as GeminiTaskResult).title.length > 0
+      (t: unknown): t is GeminiTaskResult => {
+        if (typeof t !== 'object' || t === null) return false;
+        const obj = t as Record<string, unknown>;
+        return typeof obj.title === 'string' && obj.title.length > 0;
+      }
     )
     .slice(0, 5)
     .map((t: GeminiTaskResult) => ({

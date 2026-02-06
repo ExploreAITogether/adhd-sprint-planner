@@ -45,7 +45,8 @@ function groupSprintsByDate(sprints: Sprint[]): DateGroup[] {
         allTags: [],
       })
     }
-    const group = map.get(key)!
+    const group = map.get(key)
+    if (!group) continue
     group.sprints.push(sprint)
     const completed = sprint.tasks.filter((t) => t.status === 'completed')
     group.completedTasks.push(...completed)

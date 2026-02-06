@@ -93,7 +93,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
 
   // Click outside to close
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
-    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+    if (modalRef.current && e.target instanceof Node && !modalRef.current.contains(e.target)) {
       handleClose()
     }
   }, [handleClose])

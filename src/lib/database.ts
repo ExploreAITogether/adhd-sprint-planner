@@ -94,11 +94,55 @@ interface TaskRow {
   position: number;
 }
 
+interface SprintRow {
+  id: string;
+  created_at: string;
+  status: string;
+  raw_input: string;
+}
+
+const VALID_TASK_STATUSES: ReadonlySet<Task['status']> = new Set(['pending', 'completed']);
+const VALID_SPRINT_STATUSES: ReadonlySet<Sprint['status']> = new Set(['active', 'completed', 'abandoned']);
+const VALID_THEMES: ReadonlySet<Settings['theme']> = new Set(['light', 'dark', 'system']);
+
+function parseTaskStatus(status: string): Task['status'] {
+  if (VALID_TASK_STATUSES.has(status as Task['status'])) {
+    return status as Task['status'];
+  }
+  return 'pending';
+}
+
+function parseSprintStatus(status: string): Sprint['status'] {
+  if (VALID_SPRINT_STATUSES.has(status as Sprint['status'])) {
+    return status as Sprint['status'];
+  }
+  return 'active';
+}
+
+function parseTheme(theme: string): Settings['theme'] {
+  if (VALID_THEMES.has(theme as Settings['theme'])) {
+    return theme as Settings['theme'];
+  }
+  return 'system';
+}
+
+function parseTags(tagsJson: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(tagsJson);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === 'string');
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 function mapTaskRow(row: TaskRow): Task {
   return {
     ...row,
-    status: row.status as Task['status'],
-    tags: JSON.parse(row.tags),
+    status: parseTaskStatus(row.status),
+    tags: parseTags(row.tags),
   };
 }
 
@@ -124,9 +168,9 @@ export async function createSprint(rawInput: string): Promise<Sprint> {
 export async function getActiveSprint(): Promise<Sprint | null> {
   const database = await getDb();
 
-  const sprints = await database.select<
-    { id: string; created_at: string; status: string; raw_input: string }[]
-  >('SELECT * FROM sprints WHERE status = $1 ORDER BY created_at DESC LIMIT 1', ['active']);
+  const sprints = await database.select<SprintRow[]>(
+    'SELECT * FROM sprints WHERE status = $1 ORDER BY created_at DESC LIMIT 1', ['active']
+  );
 
   if (sprints.length === 0) return null;
 
@@ -138,7 +182,7 @@ export async function getActiveSprint(): Promise<Sprint | null> {
 
   return {
     ...sprint,
-    status: sprint.status as Sprint['status'],
+    status: parseSprintStatus(sprint.status),
     tasks: tasks.map(mapTaskRow),
   };
 }
@@ -146,9 +190,9 @@ export async function getActiveSprint(): Promise<Sprint | null> {
 export async function getSprintById(id: string): Promise<Sprint | null> {
   const database = await getDb();
 
-  const sprints = await database.select<
-    { id: string; created_at: string; status: string; raw_input: string }[]
-  >('SELECT * FROM sprints WHERE id = $1', [id]);
+  const sprints = await database.select<SprintRow[]>(
+    'SELECT * FROM sprints WHERE id = $1', [id]
+  );
 
   if (sprints.length === 0) return null;
 
@@ -160,7 +204,7 @@ export async function getSprintById(id: string): Promise<Sprint | null> {
 
   return {
     ...sprint,
-    status: sprint.status as Sprint['status'],
+    status: parseSprintStatus(sprint.status),
     tasks: tasks.map(mapTaskRow),
   };
 }
@@ -269,9 +313,9 @@ export async function updateTaskPrompt(
 export async function getSprintHistory(): Promise<Sprint[]> {
   const database = await getDb();
 
-  const sprints = await database.select<
-    { id: string; created_at: string; status: string; raw_input: string }[]
-  >('SELECT * FROM sprints ORDER BY created_at DESC');
+  const sprints = await database.select<SprintRow[]>(
+    'SELECT * FROM sprints ORDER BY created_at DESC'
+  );
 
   const result: Sprint[] = [];
   for (const sprint of sprints) {
@@ -282,7 +326,7 @@ export async function getSprintHistory(): Promise<Sprint[]> {
 
     result.push({
       ...sprint,
-      status: sprint.status as Sprint['status'],
+      status: parseSprintStatus(sprint.status),
       tasks: tasks.map(mapTaskRow),
     });
   }
@@ -304,7 +348,7 @@ export async function getSettings(): Promise<Settings> {
   const row = rows[0];
   return {
     sound_enabled: row.sound_enabled === 1,
-    theme: row.theme as Settings['theme'],
+    theme: parseTheme(row.theme),
     export_path: row.export_path,
   };
 }
