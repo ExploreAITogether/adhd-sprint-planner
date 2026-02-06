@@ -111,6 +111,29 @@ function UndoToast({ message, onUndo, onDone }: { message: string; onUndo: () =>
   )
 }
 
+function ErrorToast({ message, onDone }: { message: string; onDone: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, 4000)
+    return () => clearTimeout(timer)
+  }, [onDone])
+
+  return (
+    <div
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+        rounded-2xl px-5 py-3 text-sm font-medium"
+      style={{
+        backgroundColor: 'var(--t-toast-bg)',
+        border: '1px solid var(--t-toast-border)',
+        boxShadow: 'var(--t-toast-shadow)',
+        color: 'var(--t-red, #e53e3e)',
+        animation: 'slide-up-fade 300ms ease-out',
+      }}
+    >
+      {message}
+    </div>
+  )
+}
+
 const KEYWORD_EMOJI_MAP: [RegExp, string][] = [
   [/\b(email|reply|inbox|mail)\b/i, '📧'],
   [/\b(call|phone|dial)\b/i, '📞'],
@@ -152,7 +175,7 @@ export default function SprintView({
 }: SprintViewProps) {
   // Ordered, mutable task list — single source of truth for the sprint view
   const [tasks, setTasks] = useState<Task[]>(() =>
-    [...sprint.tasks].sort((a, b) => a.position - b.position)
+    [...(sprint.tasks ?? [])].sort((a, b) => a.position - b.position)
   )
 
   const [justCompleted, setJustCompleted] = useState<Set<string>>(new Set())
@@ -167,6 +190,7 @@ export default function SprintView({
   const [showAddInput, setShowAddInput] = useState(false)
   const [addInputValue, setAddInputValue] = useState('')
   const addInputRef = useRef<HTMLInputElement>(null)
+  const [errorToast, setErrorToast] = useState<string | null>(null)
 
   // DnD sensors
   const sensors = useSensors(
@@ -218,9 +242,15 @@ export default function SprintView({
       const wasCompleted = task.status === 'completed'
       const newStatus = wasCompleted ? 'pending' : 'completed'
       const now = new Date().toISOString()
+      const previousTasks = prev
 
       updateTaskStatus(taskId, newStatus, newStatus === 'completed' ? now : undefined).catch(
-        (err) => console.error('Failed to update task:', err)
+        (err) => {
+          console.error('Failed to update task:', err)
+          setTasks(previousTasks)
+          onTaskToggle?.(taskId, wasCompleted ? 'completed' : 'pending')
+          setErrorToast('Failed to update task. Change has been reverted.')
+        }
       )
 
       onTaskToggle?.(taskId, newStatus)
@@ -281,12 +311,21 @@ export default function SprintView({
   }, [])
 
   const handleEdit = useCallback((taskId: string, newTitle: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, title: newTitle } : t))
-    )
-    updateTaskTitle(taskId, newTitle).catch((err) =>
-      console.error('Failed to update task title:', err)
-    )
+    setTasks((prev) => {
+      const oldTask = prev.find((t) => t.id === taskId)
+      const oldTitle = oldTask?.title ?? newTitle
+
+      updateTaskTitle(taskId, newTitle).catch((err) => {
+        console.error('Failed to update task title:', err)
+        setTasks((current) =>
+          current.map((t) => (t.id === taskId ? { ...t, title: oldTitle } : t))
+        )
+        onTaskEdit?.(taskId, oldTitle)
+        setErrorToast('Failed to save edit. Change has been reverted.')
+      })
+
+      return prev.map((t) => (t.id === taskId ? { ...t, title: newTitle } : t))
+    })
     onTaskEdit?.(taskId, newTitle)
     setEditingTaskId(null)
   }, [onTaskEdit])
@@ -305,9 +344,17 @@ export default function SprintView({
         const task = prev[index]
 
         // Delete from DB immediately
-        dbDeleteTask(taskId).catch((err) =>
+        dbDeleteTask(taskId).catch((err) => {
           console.error('Failed to delete task:', err)
-        )
+          // Restore the task since DB delete failed
+          setTasks((current) => {
+            const restored = [...current]
+            restored.splice(Math.min(index, current.length), 0, task)
+            return restored
+          })
+          setDeletedTaskInfo(null)
+          setErrorToast('Failed to delete task. It has been restored.')
+        })
 
         // Notify parent
         onTaskDelete?.(taskId)
@@ -328,9 +375,12 @@ export default function SprintView({
     const { task, index } = deletedTaskInfo
 
     // Restore to DB
-    restoreTask(task).catch((err) =>
+    restoreTask(task).catch((err) => {
       console.error('Failed to restore task:', err)
-    )
+      // Revert: remove the task from UI since DB restore failed
+      setTasks((current) => current.filter((t) => t.id !== task.id))
+      setErrorToast('Failed to restore task.')
+    })
 
     // Restore to local state at original position
     setTasks((prev) => {
@@ -366,10 +416,16 @@ export default function SprintView({
 
       // Update positions
       const positioned = reordered.map((t, i) => ({ ...t, position: i }))
+      const previousTasks = prev
 
       // Save to DB
       updateTaskPositions(positioned.map((t, i) => ({ id: t.id, position: i }))).catch(
-        (err) => console.error('Failed to update positions:', err)
+        (err) => {
+          console.error('Failed to update positions:', err)
+          setTasks(previousTasks)
+          onTasksReorder?.(previousTasks)
+          setErrorToast('Failed to reorder tasks. Order has been reverted.')
+        }
       )
 
       // Notify parent
@@ -433,6 +489,7 @@ export default function SprintView({
       addInputRef.current?.focus()
     } catch (err) {
       console.error('Failed to add task:', err)
+      setErrorToast('Failed to add task. Please try again.')
     }
   }, [addInputValue, tasks, sprint.id, onTaskAdd])
 
@@ -749,6 +806,10 @@ export default function SprintView({
           onUndo={handleUndo}
           onDone={handleUndoDone}
         />
+      )}
+
+      {errorToast && !deletedTaskInfo && (
+        <ErrorToast message={errorToast} onDone={() => setErrorToast(null)} />
       )}
     </div>
   )

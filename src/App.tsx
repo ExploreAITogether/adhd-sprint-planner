@@ -45,7 +45,7 @@ function AppContent() {
 
         // Check for an existing active sprint
         const existing = await getActiveSprint()
-        if (existing && existing.tasks.length > 0) {
+        if (existing && existing.tasks && existing.tasks.length > 0) {
           setActiveSprint(existing)
           setView('sprint')
         }
@@ -109,7 +109,7 @@ function AppContent() {
 
   const handleTaskToggle = useCallback((taskId: string, newStatus: Task['status']) => {
     setActiveSprint((prev) => {
-      if (!prev) return prev
+      if (!prev?.tasks) return prev
       return {
         ...prev,
         tasks: prev.tasks.map((t) =>
@@ -123,7 +123,7 @@ function AppContent() {
 
   const handleTaskEdit = useCallback((taskId: string, newTitle: string) => {
     setActiveSprint((prev) => {
-      if (!prev) return prev
+      if (!prev?.tasks) return prev
       return {
         ...prev,
         tasks: prev.tasks.map((t) =>
@@ -135,7 +135,7 @@ function AppContent() {
 
   const handleTaskDelete = useCallback((taskId: string) => {
     setActiveSprint((prev) => {
-      if (!prev) return prev
+      if (!prev?.tasks) return prev
       return {
         ...prev,
         tasks: prev.tasks.filter((t) => t.id !== taskId),
@@ -153,7 +153,7 @@ function AppContent() {
   const handleTaskAdd = useCallback((task: Task) => {
     setActiveSprint((prev) => {
       if (!prev) return prev
-      return { ...prev, tasks: [...prev.tasks, task] }
+      return { ...prev, tasks: [...(prev.tasks ?? []), task] }
     })
   }, [])
 
@@ -163,11 +163,17 @@ function AppContent() {
         const refreshed = await getSprintById(activeSprint.id)
         if (refreshed) {
           setActiveSprint(refreshed)
+          setView('sprint')
+        } else {
+          // Sprint was deleted or no longer exists
+          setActiveSprint(null)
+          setView('landing')
         }
       } catch (err) {
         console.error('Failed to refresh sprint:', err)
+        // Keep current sprint data and navigate back to sprint view
+        setView('sprint')
       }
-      setView('sprint')
     } else {
       setView('landing')
     }

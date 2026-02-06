@@ -143,21 +143,29 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps) {
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [toast, setToast] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
+  const loadHistory = useCallback(() => {
+    setLoading(true)
+    setLoadError(null)
     getSprintHistory()
       .then((history) => {
         setSprints(history)
       })
       .catch((err) => {
         console.error('Failed to load history:', err)
+        setLoadError('Failed to load sprint history. Please try again.')
       })
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    loadHistory()
+  }, [loadHistory])
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300)
@@ -384,7 +392,26 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
               </div>
             )}
 
-            {!loading && sprints.length === 0 && (
+            {!loading && loadError && (
+              <div className="text-center py-16">
+                <p className="text-3xl mb-3">&#x26A0;&#xFE0F;</p>
+                <p className="text-sm mb-4" style={{ color: 'var(--t-red, #e53e3e)' }}>
+                  {loadError}
+                </p>
+                <button
+                  onClick={loadHistory}
+                  className="rounded-xl py-2.5 px-5 text-sm font-medium text-white
+                    active:scale-[0.98] transition-all duration-200"
+                  style={{
+                    background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {!loading && !loadError && sprints.length === 0 && (
               <div className="text-center py-16">
                 <p className="text-3xl mb-3">&#x1F4CB;</p>
                 <p className="text-sm" style={{ color: 'var(--t-text-light)' }}>
@@ -393,7 +420,7 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
               </div>
             )}
 
-            {!loading && sprints.length > 0 && dateGroups.length === 0 && debouncedQuery && (
+            {!loading && !loadError && sprints.length > 0 && dateGroups.length === 0 && debouncedQuery && (
               <div className="text-center py-16">
                 <p className="text-3xl mb-3">&#x1F50D;</p>
                 <p className="text-sm" style={{ color: 'var(--t-text-light)' }}>
@@ -402,7 +429,7 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
               </div>
             )}
 
-            {!loading &&
+            {!loading && !loadError &&
               dateGroups.map((group) => (
                 <div
                   key={group.key}
