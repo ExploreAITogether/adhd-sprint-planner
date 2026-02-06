@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { Task } from '../types'
@@ -16,7 +16,7 @@ interface TaskCardProps {
   isDeleting?: boolean
 }
 
-export default function TaskCard({
+const TaskCard = memo(function TaskCard({
   task,
   onToggle,
   onHelp,
@@ -295,4 +295,6 @@ export default function TaskCard({
       )}
     </div>
   )
-}
+})
+
+export default TaskCard
