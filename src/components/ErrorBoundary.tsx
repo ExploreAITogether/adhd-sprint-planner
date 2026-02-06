@@ -53,16 +53,25 @@ export default class ErrorBoundary extends Component<Props, State> {
                 {this.state.error.message}
               </p>
             )}
-            <button
-              onClick={this.handleRestart}
-              className="rounded-xl py-3 px-8 text-sm font-medium text-white transition-all duration-200 active:scale-[0.98]"
-              style={{
-                background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
-                boxShadow: `0 2px 12px var(--t-accent-shadow)`,
-              }}
-            >
-              Try again
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={this.handleRestart}
+                className="rounded-xl py-3 px-8 text-sm font-medium text-white transition-all duration-200 active:scale-[0.98]"
+                style={{
+                  background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
+                  boxShadow: `0 2px 12px var(--t-accent-shadow)`,
+                }}
+              >
+                Try again
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="rounded-xl py-2.5 px-8 text-xs font-medium transition-all duration-200 active:scale-[0.98]"
+                style={{ color: 'var(--t-text-light)' }}
+              >
+                Reload app
+              </button>
+            </div>
           </div>
         </div>
       )
