@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { initDatabase, createSprint, addTask, getActiveSprint, getSprintById, getWeekDays, setDayTheme, clearDayTheme } from './lib/database'
 import { parseBrainDump } from './lib/gemini'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -6,7 +6,6 @@ import LandingScreen from './components/LandingScreen'
 import SprintView from './components/SprintView'
 import HistoryView from './components/HistoryView'
 import SettingsModal from './components/SettingsModal'
-import WeeklyStrip from './components/WeeklyStrip'
 import ThemeEditorModal from './components/ThemeEditorModal'
 import ErrorBoundary from './components/ErrorBoundary'
 import type { Sprint, Task, WeekDay } from './types'
@@ -15,6 +14,31 @@ import './App.css'
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 type AppView = 'landing' | 'sprint' | 'history'
+
+function AppToast({ message, onDone }: { message: string; onDone: () => void }) {
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  useEffect(() => {
+    timerRef.current = setTimeout(onDone, 4000)
+    return () => clearTimeout(timerRef.current)
+  }, [onDone])
+
+  return (
+    <div
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+        rounded-2xl px-5 py-3 text-sm font-medium"
+      style={{
+        backgroundColor: 'var(--t-toast-bg)',
+        border: '1px solid var(--t-toast-border)',
+        boxShadow: 'var(--t-toast-shadow)',
+        color: 'var(--t-red, #e53e3e)',
+        animation: 'slide-up-fade 300ms ease-out',
+      }}
+    >
+      {message}
+    </div>
+  )
+}
 
 function AppContent() {
   const [dbReady, setDbReady] = useState(false)
@@ -27,6 +51,7 @@ function AppContent() {
   const [weekDays, setWeekDays] = useState<WeekDay[]>([])
   const [themeEditorOpen, setThemeEditorOpen] = useState(false)
   const [selectedDayForEdit, setSelectedDayForEdit] = useState<number | null>(null)
+  const [appToast, setAppToast] = useState<string | null>(null)
 
   const refreshWeekDays = useCallback(async () => {
     try {
@@ -193,6 +218,7 @@ function AppContent() {
       await refreshWeekDays()
     } catch (err) {
       console.error('Failed to save day theme:', err)
+      setAppToast('Failed to save day theme. Please try again.')
     }
     setThemeEditorOpen(false)
     setSelectedDayForEdit(null)
@@ -205,6 +231,7 @@ function AppContent() {
       await refreshWeekDays()
     } catch (err) {
       console.error('Failed to clear day theme:', err)
+      setAppToast('Failed to clear day theme. Please try again.')
     }
     setThemeEditorOpen(false)
     setSelectedDayForEdit(null)
@@ -290,6 +317,8 @@ function AppContent() {
         onClear={handleThemeClear}
         onClose={handleThemeEditorClose}
       />
+
+      {appToast && <AppToast message={appToast} onDone={() => setAppToast(null)} />}
     </>
   )
 }
