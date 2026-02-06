@@ -67,7 +67,8 @@ export async function initDatabase(): Promise<void> {
     await database.execute(
       'ALTER TABLE tasks ADD COLUMN position INTEGER NOT NULL DEFAULT 0'
     );
-    // Set initial positions for existing tasks based on rowid order
+    // Backfill positions for pre-existing tasks: assign sequential indices
+    // per sprint so each sprint's tasks get independent 0-based ordering.
     const existingTasks = await database.select<{ id: string; sprint_id: string }[]>(
       'SELECT id, sprint_id FROM tasks ORDER BY rowid'
     );
@@ -165,6 +166,20 @@ export async function createSprint(rawInput: string): Promise<Sprint> {
   };
 }
 
+/** Fetch a sprint's tasks and assemble the full Sprint object. */
+async function loadSprintWithTasks(database: Database, row: SprintRow): Promise<Sprint> {
+  const tasks = await database.select<TaskRow[]>(
+    'SELECT * FROM tasks WHERE sprint_id = $1 ORDER BY position ASC',
+    [row.id]
+  );
+
+  return {
+    ...row,
+    status: parseSprintStatus(row.status),
+    tasks: tasks.map(mapTaskRow),
+  };
+}
+
 export async function getActiveSprint(): Promise<Sprint | null> {
   const database = await getDb();
 
@@ -173,18 +188,7 @@ export async function getActiveSprint(): Promise<Sprint | null> {
   );
 
   if (sprints.length === 0) return null;
-
-  const sprint = sprints[0];
-  const tasks = await database.select<TaskRow[]>(
-    'SELECT * FROM tasks WHERE sprint_id = $1 ORDER BY position ASC',
-    [sprint.id]
-  );
-
-  return {
-    ...sprint,
-    status: parseSprintStatus(sprint.status),
-    tasks: tasks.map(mapTaskRow),
-  };
+  return loadSprintWithTasks(database, sprints[0]);
 }
 
 export async function getSprintById(id: string): Promise<Sprint | null> {
@@ -195,18 +199,7 @@ export async function getSprintById(id: string): Promise<Sprint | null> {
   );
 
   if (sprints.length === 0) return null;
-
-  const sprint = sprints[0];
-  const tasks = await database.select<TaskRow[]>(
-    'SELECT * FROM tasks WHERE sprint_id = $1 ORDER BY position ASC',
-    [sprint.id]
-  );
-
-  return {
-    ...sprint,
-    status: parseSprintStatus(sprint.status),
-    tasks: tasks.map(mapTaskRow),
-  };
+  return loadSprintWithTasks(database, sprints[0]);
 }
 
 export async function updateSprintStatus(
@@ -299,6 +292,10 @@ async function writeTaskPositions(
   }
 }
 
+// Debounced position writer: drag-and-drop fires rapid reorder events, so we
+// batch them into a single DB write after 300ms of inactivity. Each call
+// replaces any pending positions (only the latest order matters) and collects
+// promise resolvers so every caller gets notified when the write completes.
 let positionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingPositions: { id: string; position: number }[] | null = null;
 let positionResolvers: { resolve: () => void; reject: (err: unknown) => void }[] = [];
@@ -306,7 +303,6 @@ let positionResolvers: { resolve: () => void; reject: (err: unknown) => void }[]
 export function updateTaskPositions(
   taskPositions: { id: string; position: number }[]
 ): Promise<void> {
-  // Always keep the latest positions — earlier pending values are stale
   pendingPositions = taskPositions;
 
   return new Promise<void>((resolve, reject) => {
@@ -357,16 +353,7 @@ export async function getSprintHistory(
 
   const result: Sprint[] = [];
   for (const sprint of page) {
-    const tasks = await database.select<TaskRow[]>(
-      'SELECT * FROM tasks WHERE sprint_id = $1 ORDER BY position ASC',
-      [sprint.id]
-    );
-
-    result.push({
-      ...sprint,
-      status: parseSprintStatus(sprint.status),
-      tasks: tasks.map(mapTaskRow),
-    });
+    result.push(await loadSprintWithTasks(database, sprint));
   }
 
   return { sprints: result, hasMore };
@@ -481,10 +468,15 @@ export async function clearDayTheme(dayOfWeek: number): Promise<void> {
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
+/** Format a Date as YYYY-MM-DD for date-only comparisons. */
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export async function getWeekDays(): Promise<WeekDay[]> {
   const today = new Date();
-  // getDay() returns 0=Sun, 1=Mon, ..., 6=Sat
-  // Convert to Monday-based: Mon=0, Tue=1, ..., Sun=6
+  // JS getDay(): 0=Sun, 1=Mon, ..., 6=Sat. We need Monday-based offsets
+  // (Mon=0 .. Sun=6) so Sunday (0) maps to offset 6, and all others shift by -1.
   const jsDay = today.getDay();
   const mondayOffset = jsDay === 0 ? 6 : jsDay - 1;
 
@@ -495,9 +487,10 @@ export async function getWeekDays(): Promise<WeekDay[]> {
 
   const themes = await getDayThemes();
 
-  // Calculate week boundaries for scoped query
+  // Week boundaries for the completed-tasks query: [monday 00:00, next-monday 00:00).
+  // Using ISO strings works for range comparison because they sort lexicographically.
   const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 7); // midnight after Sunday
+  sunday.setDate(monday.getDate() + 7);
 
   const mondayISO = monday.toISOString();
   const sundayISO = sunday.toISOString();
@@ -512,18 +505,16 @@ export async function getWeekDays(): Promise<WeekDay[]> {
   // Build a set of date strings (YYYY-MM-DD) that have completed tasks
   const completedDates = new Set<string>();
   for (const task of completedTasks) {
-    const d = new Date(task.completed_at);
-    const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    completedDates.add(dateKey);
+    completedDates.add(toDateKey(new Date(task.completed_at)));
   }
 
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const todayStr = toDateKey(today);
 
   const weekDays: WeekDay[] = [];
   for (let i = 0; i < 7; i++) {
     const date = new Date(monday);
     date.setDate(monday.getDate() + i);
-    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const dateKey = toDateKey(date);
 
     weekDays.push({
       dayOfWeek: i + 1,     // 1=Monday, 7=Sunday
