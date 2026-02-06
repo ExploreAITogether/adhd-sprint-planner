@@ -118,7 +118,7 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
   }, [handleClose, handleCopy, state, prompt])
 
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
-    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+    if (modalRef.current && e.target instanceof Node && !modalRef.current.contains(e.target)) {
       handleClose()
     }
   }, [handleClose])
@@ -252,7 +252,7 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
                     borderColor: 'var(--t-border-light)',
                     color: 'var(--t-text)',
                   }}
-                  onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                  onClick={(e) => { if (e.target instanceof HTMLTextAreaElement) e.target.select() }}
                 />
 
                 <p className="text-xs mt-2.5 text-center" style={{ color: 'var(--t-text-faint)' }}>
