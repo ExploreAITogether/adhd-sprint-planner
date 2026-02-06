@@ -1,16 +1,6 @@
 import type { Task } from '../types';
-
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-
-function getApiKey(): string {
-  const key = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!key || key === 'your_gemini_api_key_here') {
-    throw new Error(
-      'Gemini API key not configured. Set VITE_GEMINI_API_KEY in your .env file.'
-    );
-  }
-  return key;
-}
+import { GEMINI_API_URL, getApiKey } from './geminiConfig';
+import type { GeminiResponse } from './geminiConfig';
 
 const META_PROMPT = `You are a helpful AI prompt engineer. Given a task from an ADHD-friendly sprint planner, generate a ready-to-use prompt that the user can paste into any AI assistant (like Claude, ChatGPT, etc.) to get help completing the task.
 
@@ -50,19 +40,6 @@ Prompt: Help me research and compare pricing strategies for [your product/servic
 - Any notable discounts or annual pricing
 
 Create a comparison table and highlight where there might be gaps or opportunities for my product.`;
-
-interface GeminiResponse {
-  candidates?: {
-    content?: {
-      parts?: {
-        text?: string;
-      }[];
-    };
-  }[];
-  error?: {
-    message?: string;
-  };
-}
 
 const FALLBACK_PROMPT = (title: string) =>
   `Help me with this task: "${title}". Break it down into clear, manageable steps and guide me through completing it. If you need more context, ask me specific questions first.`;

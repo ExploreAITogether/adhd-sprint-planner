@@ -271,6 +271,8 @@ export default function SprintView({
         }, 700)
         animTimers.current.set(taskId, timer)
 
+        // Check if this was the last pending task: if every *other* task is
+        // already completed, toggling this one completes the entire sprint.
         const allOthersComplete = prev.every(
           (t) => t.id === taskId || t.status === 'completed'
         )
@@ -336,6 +338,8 @@ export default function SprintView({
     // Play delete animation first
     setDeletingTaskId(taskId)
 
+    // Delay removal to let the CSS slide-out animation finish (300ms matches
+    // the task-slide-out keyframe duration defined in index.css).
     setTimeout(() => {
       setTasks((prev) => {
         const index = prev.findIndex((t) => t.id === taskId)
@@ -343,10 +347,8 @@ export default function SprintView({
 
         const task = prev[index]
 
-        // Delete from DB immediately
         dbDeleteTask(taskId).catch((err) => {
           console.error('Failed to delete task:', err)
-          // Restore the task since DB delete failed
           setTasks((current) => {
             const restored = [...current]
             restored.splice(Math.min(index, current.length), 0, task)
@@ -356,17 +358,14 @@ export default function SprintView({
           setErrorToast('Failed to delete task. It has been restored.')
         })
 
-        // Notify parent
         onTaskDelete?.(taskId)
-
-        // Store for potential undo
         setDeletedTaskInfo({ task, index })
 
         return prev.filter((t) => t.id !== taskId)
       })
 
       setDeletingTaskId(null)
-    }, 300) // Wait for slide-out animation
+    }, 300)
   }, [onTaskDelete])
 
   const handleUndo = useCallback(() => {
@@ -493,6 +492,8 @@ export default function SprintView({
     }
   }, [addInputValue, tasks, sprint.id, onTaskAdd])
 
+  // Derive display-friendly date info. Wrapped in try-catch because
+  // sprint.created_at could theoretically be an invalid ISO string.
   const sprintDateInfo = (() => {
     try {
       const date = new Date(sprint.created_at)
