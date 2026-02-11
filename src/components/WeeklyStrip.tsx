@@ -63,7 +63,10 @@ export default function WeeklyStrip({ weekDays, onDayClick }: WeeklyStripProps) 
             </span>
 
             {/* Emoji or placeholder */}
-            <span className="text-xl leading-none h-7 flex items-center justify-center">
+            <span
+              className="text-xl leading-none h-7 flex items-center justify-center"
+              style={{ color: 'var(--t-text)' }}
+            >
               {day.theme ? (
                 day.theme.emoji
               ) : (
