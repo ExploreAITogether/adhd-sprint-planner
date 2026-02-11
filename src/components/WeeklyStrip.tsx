@@ -56,7 +56,7 @@ export default function WeeklyStrip({ weekDays, onDayClick }: WeeklyStripProps) 
               style={{
                 color: day.isToday
                   ? 'var(--t-accent)'
-                  : 'var(--t-text-light)',
+                  : 'var(--t-text)',
               }}
             >
               {day.label}
@@ -69,7 +69,7 @@ export default function WeeklyStrip({ weekDays, onDayClick }: WeeklyStripProps) 
               ) : (
                 <span
                   className="text-sm"
-                  style={{ color: 'var(--t-text-faint)' }}
+                  style={{ color: 'var(--t-text-light)' }}
                   aria-hidden="true"
                 >
                   —
