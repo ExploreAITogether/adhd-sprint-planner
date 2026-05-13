@@ -12,7 +12,7 @@ A calming desktop app that takes messy brain dumps and turns them into clear, ma
 ## Features
 
 - **Brain dump input** with voice recognition support
-- **AI-powered task parsing** via Gemini 2.0 Flash (free tier)
+- **AI-powered task parsing** via Gemini 2.5 Flash (free tier)
 - **Satisfying completion animations** -- check fills, bursts, strikethroughs, and celebration particles
 - **Completion sounds** -- subtle audio chimes using Web Audio API
 - **"Help Me" prompts** -- AI generates ready-to-paste prompts for any task
@@ -31,7 +31,7 @@ A calming desktop app that takes messy brain dumps and turns them into clear, ma
 | Frontend | React 19 + TypeScript 5.9 |
 | Styling | Tailwind CSS 4 + CSS custom properties |
 | Build | Vite 7 |
-| AI | [Gemini 2.0 Flash](https://ai.google.dev/) (free tier) |
+| AI | [Gemini 2.5 Flash](https://ai.google.dev/) (free tier) |
 | Database | SQLite via `tauri-plugin-sql` |
 | Audio | Web Audio API |
 | Voice | Web Speech API |
@@ -71,6 +71,8 @@ npm run tauri dev
 | Variable | Description |
 |----------|-------------|
 | `VITE_GEMINI_API_KEY` | Your Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey) |
+
+`VITE_GEMINI_API_KEY` is embedded into production bundles by Vite at build time. Do not commit `.env`, and rebuild the app after changing or rotating the key.
 
 ## Building for Release
 

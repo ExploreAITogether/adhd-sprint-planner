@@ -4,7 +4,7 @@
 
 ADHD Sprint Planner is a desktop app that turns messy brain dumps into clear, actionable task sprints. Users type (or voice-dictate) a stream-of-consciousness dump, Gemini AI parses it into 1-5 discrete tasks, and users complete them with satisfying animations and sound effects.
 
-**Tech stack:** Tauri v2 (Rust backend + React 19 frontend), TypeScript, Tailwind CSS v4, SQLite via `@tauri-apps/plugin-sql`, Gemini 2.0 Flash API (free tier).
+**Tech stack:** Tauri v2 (Rust backend + React 19 frontend), TypeScript, Tailwind CSS v4, SQLite via `@tauri-apps/plugin-sql`, Gemini 2.5 Flash API (free tier).
 
 **Design philosophy:** Calming Headspace/Calm aesthetic with soft gradients, gentle animations, and micro-interactions. Low friction input, dopamine-hit completion feedback (particles, sounds, celebrations). Local-first data — everything stored in SQLite on disk, no account needed.
 
@@ -41,8 +41,8 @@ src/
 src-tauri/
 ├── src/
 │   ├── main.rs              # Tauri entry point
-│   └── lib.rs               # Plugin registration (sql, dialog, fs)
-├── Cargo.toml               # Rust deps: tauri, tauri-plugin-sql, dialog, fs
+│   └── lib.rs               # Plugin registration (single-instance, sql, dialog, fs)
+├── Cargo.toml               # Rust deps: tauri, tauri-plugin-sql, dialog, fs, single-instance
 ├── tauri.conf.json           # App config (window size, identifier, build paths)
 └── capabilities/default.json # Security permissions for Tauri plugins
 ```
@@ -51,7 +51,7 @@ src-tauri/
 
 - **`src/App.tsx`** — Main app state (active sprint, current view, weekly themes, loading/error). Routes between `LandingScreen`, `SprintView`, and `HistoryView`. Manages day theme editing flow and weekly strip data refresh.
 - **`src/lib/database.ts`** — All database operations. Singleton `getDb()` pattern. Schema creation in `initDatabase()`. CRUD for sprints, tasks, settings, and day themes.
-- **`src/lib/gemini.ts`** — Calls Gemini 2.0 Flash to parse brain dump text into 1-5 tasks with title, emoji, and tags. API key from `VITE_GEMINI_API_KEY` env var.
+- **`src/lib/gemini.ts`** — Calls Gemini 2.5 Flash to parse brain dump text into 1-5 tasks with title, emoji, and tags. API key from `VITE_GEMINI_API_KEY` env var. Model URL is centralized in `src/lib/geminiConfig.ts`.
 - **`src/lib/promptGenerator.ts`** — Generates AI-friendly help prompts for individual tasks. Results cached in the `tasks.generated_prompt` column.
 - **`src/types/index.ts`** — All shared TypeScript interfaces.
 
@@ -131,6 +131,11 @@ src-tauri/
 
 ### API Key
 - Gemini API key set via `VITE_GEMINI_API_KEY` environment variable (`.env` file)
+- Key is **baked into the bundle at build time** by Vite — rotating the key requires `npm run tauri build` and reinstalling for the change to reach the desktop app
+- Model URL lives in `src/lib/geminiConfig.ts`. Update there if Gemini deprecates the current model (history: `gemini-2.0-flash` → `gemini-2.5-flash` after 2.0 hit `RESOURCE_EXHAUSTED` 429s on free tier)
+
+### Single-Instance Behavior
+- `tauri-plugin-single-instance` is registered in `src-tauri/src/lib.rs`. Launching the app a second time (e.g. from a Stream Deck button or Start Menu shortcut) does not spawn a duplicate — the plugin's callback unminimizes, shows, and focuses the existing `main` window. This avoids SQLite lock contention from concurrent instances and makes the app feel right when bound to a hotkey.
 
 ## Build & Dev Commands
 
