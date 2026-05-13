@@ -28,6 +28,7 @@ import {
   updateSettings,
 } from '../lib/database'
 import { playCompleteSound, playSprintCompleteSound } from '../lib/sounds'
+import { useSpeechRecognition, type SpeechError } from '../hooks/useSpeechRecognition'
 import TaskCard from './TaskCard'
 import HelpPromptModal from './HelpPromptModal'
 import WeeklyStrip from './WeeklyStrip'
@@ -159,6 +160,21 @@ function getEmojiForTask(title: string): string {
   return '📌'
 }
 
+function voiceErrorMessage(error: SpeechError): string {
+  switch (error) {
+    case 'permission-denied':
+      return 'Microphone access needed for voice input. Enable in system settings.'
+    case 'no-speech':
+      return "I didn't hear anything. Try again?"
+    case 'network':
+      return "You're offline. Voice recognition needs a network connection."
+    case 'not-supported':
+      return 'Voice input is not supported in this browser.'
+    default:
+      return 'Something went wrong with voice input. Try again?'
+  }
+}
+
 export default function SprintView({
   sprint,
   onBack,
@@ -190,7 +206,18 @@ export default function SprintView({
   const [showAddInput, setShowAddInput] = useState(false)
   const [addInputValue, setAddInputValue] = useState('')
   const addInputRef = useRef<HTMLInputElement>(null)
+  const voiceBaseRef = useRef('')
   const [errorToast, setErrorToast] = useState<string | null>(null)
+  const {
+    isSupported: voiceSupported,
+    isListening,
+    transcript,
+    interimTranscript,
+    error: speechError,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition()
 
   // DnD sensors
   const sensors = useSensors(
@@ -213,6 +240,21 @@ export default function SprintView({
     }
   }, [])
 
+  useEffect(() => {
+    if (transcript || interimTranscript) {
+      const combined = `${voiceBaseRef.current}${transcript}${interimTranscript}`
+      const timer = setTimeout(() => setAddInputValue(combined.slice(0, 120)), 0)
+      return () => clearTimeout(timer)
+    }
+  }, [transcript, interimTranscript])
+
+  useEffect(() => {
+    if (speechError && speechError !== 'not-supported') {
+      const timer = setTimeout(() => setErrorToast(voiceErrorMessage(speechError)), 0)
+      return () => clearTimeout(timer)
+    }
+  }, [speechError])
+
   const completedCount = tasks.filter((t) => t.status === 'completed').length
   const totalCount = tasks.length
   const allDone = completedCount === totalCount && totalCount > 0
@@ -227,7 +269,9 @@ export default function SprintView({
       return () => clearTimeout(timer)
     }
     if (!allDone && prevAllDone.current) {
-      setCelebrating(false)
+      const timer = setTimeout(() => setCelebrating(false), 0)
+      prevAllDone.current = allDone
+      return () => clearTimeout(timer)
     }
     prevAllDone.current = allDone
   }, [allDone, soundEnabled])
@@ -459,9 +503,27 @@ export default function SprintView({
   }, [])
 
   const handleCloseAddInput = useCallback(() => {
+    if (isListening) stopListening()
+    resetTranscript()
+    voiceBaseRef.current = ''
     setShowAddInput(false)
     setAddInputValue('')
-  }, [])
+  }, [isListening, stopListening, resetTranscript])
+
+  const handleAddVoiceToggle = useCallback(() => {
+    if (isListening) {
+      stopListening()
+      addInputRef.current?.focus()
+      return
+    }
+
+    setShowAddInput(true)
+    setErrorToast(null)
+    resetTranscript()
+    voiceBaseRef.current = addInputValue.trim() ? `${addInputValue.trim()} ` : ''
+    startListening()
+    setTimeout(() => addInputRef.current?.focus(), 0)
+  }, [addInputValue, isListening, resetTranscript, startListening, stopListening])
 
   const handleAddTaskSubmit = useCallback(async () => {
     const title = addInputValue.trim()
@@ -484,13 +546,16 @@ export default function SprintView({
       setTasks((prev) => [...prev, savedTask])
       onTaskAdd?.(savedTask)
       setAddInputValue('')
+      if (isListening) stopListening()
+      resetTranscript()
+      voiceBaseRef.current = ''
       // Keep input open for adding more
       addInputRef.current?.focus()
     } catch (err) {
       console.error('Failed to add task:', err)
       setErrorToast('Failed to add task. Please try again.')
     }
-  }, [addInputValue, tasks, sprint.id, onTaskAdd])
+  }, [addInputValue, tasks, sprint.id, onTaskAdd, isListening, stopListening, resetTranscript])
 
   // Derive display-friendly date info. Wrapped in try-catch because
   // sprint.created_at could theoretically be an invalid ISO string.
@@ -635,7 +700,8 @@ export default function SprintView({
                   className="flex items-center gap-2 rounded-xl px-4 py-2.5"
                   style={{
                     backgroundColor: 'var(--t-card-inner)',
-                    border: '1px solid var(--t-border)',
+                    border: isListening ? '1px solid var(--t-red)' : '1px solid var(--t-border)',
+                    boxShadow: isListening ? '0 0 0 2px rgba(229,115,115,0.1)' : undefined,
                   }}
                 >
                   <input
@@ -648,15 +714,59 @@ export default function SprintView({
                       if (e.key === 'Escape') handleCloseAddInput()
                     }}
                     onBlur={(e) => {
-                      // Don't close if clicking the Add button
+                      // Don't close if clicking an inline add control.
                       if (e.relatedTarget?.getAttribute('data-add-btn')) return
+                      if (e.relatedTarget?.getAttribute('data-voice-btn')) return
                       if (!addInputValue.trim()) handleCloseAddInput()
                     }}
-                    placeholder="What else?"
+                    placeholder={isListening ? 'Listening...' : 'What else?'}
                     className="flex-1 bg-transparent text-sm outline-none placeholder:opacity-50"
                     style={{ color: 'var(--t-text)', caretColor: 'var(--t-accent)' }}
                     maxLength={120}
                   />
+                  {voiceSupported && (
+                    <div className="relative shrink-0">
+                      {isListening && (
+                        <span
+                          className="absolute inset-0 rounded-full pointer-events-none"
+                          style={{ backgroundColor: 'rgba(229,115,115,0.25)', animation: 'recording-ring 1.5s ease-out infinite' }}
+                        />
+                      )}
+                      <button
+                        data-voice-btn="true"
+                        onClick={handleAddVoiceToggle}
+                        aria-label={isListening ? 'Stop recording task' : 'Record task by voice'}
+                        title={isListening ? 'Stop recording' : 'Record task'}
+                        className="relative w-8 h-8 rounded-full flex items-center justify-center
+                          transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2"
+                        style={isListening
+                          ? {
+                              backgroundColor: 'var(--t-red)',
+                              color: '#FFFFFF',
+                              boxShadow: '0 2px 10px rgba(229,115,115,0.35)',
+                              animation: 'recording-pulse 1.5s ease-in-out infinite',
+                            }
+                          : {
+                              backgroundColor: 'var(--t-neutral-btn-bg)',
+                              color: 'var(--t-text)',
+                            }
+                        }
+                      >
+                        {isListening ? (
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                            <rect x="2" y="2" width="12" height="12" rx="2" />
+                          </svg>
+                        ) : (
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <rect x="9" y="1" width="6" height="12" rx="3" />
+                            <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
+                            <line x1="12" y1="19" x2="12" y2="23" />
+                            <line x1="8" y1="23" x2="16" y2="23" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  )}
                   <button
                     data-add-btn="true"
                     onClick={handleAddTaskSubmit}
