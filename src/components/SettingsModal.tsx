@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useTheme } from '../contexts/ThemeContext'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import { getSettings, updateSettings } from '../lib/database'
 import type { Settings } from '../types'
 
@@ -90,6 +91,8 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [handleClose])
+
+  useFocusTrap(modalRef, !isClosing)
 
   // Click outside to close
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {

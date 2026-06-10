@@ -32,7 +32,8 @@ src/
 │   ├── promptGenerator.ts   # Gemini API: task → help prompt for Claude/ChatGPT
 │   └── sounds.ts            # Web Audio API sound effects
 ├── hooks/
-│   └── useSpeechRecognition.ts  # Web Speech API hook for voice input
+│   ├── useSpeechRecognition.ts  # Web Speech API hook for voice input
+│   └── useFocusTrap.ts          # Keeps Tab focus inside open modals
 ├── contexts/
 │   └── ThemeContext.tsx      # Light/dark/system theme provider
 └── types/
@@ -41,7 +42,7 @@ src/
 src-tauri/
 ├── src/
 │   ├── main.rs              # Tauri entry point
-│   └── lib.rs               # Plugin registration (single-instance, sql, dialog, fs)
+│   └── lib.rs               # Plugin registration (single-instance, sql, dialog, fs, window-state)
 ├── Cargo.toml               # Rust deps: tauri, tauri-plugin-sql, dialog, fs, single-instance
 ├── tauri.conf.json           # App config (window size, identifier, build paths)
 └── capabilities/default.json # Security permissions for Tauri plugins
@@ -144,7 +145,7 @@ src-tauri/
 - `tauri-plugin-single-instance` is registered in `src-tauri/src/lib.rs`. Launching the app a second time (e.g. from a Stream Deck button or Start Menu shortcut) does not spawn a duplicate — the plugin's callback unminimizes, shows, and focuses the existing `main` window. This avoids SQLite lock contention from concurrent instances and makes the app feel right when bound to a hotkey.
 
 ### Voice Input Behavior
-- `LandingScreen` supports voice dictation for the initial brain dump.
+- `LandingScreen` supports voice dictation for the initial brain dump; dictation appends after any already typed text.
 - `SprintView` also supports voice dictation when adding a single task via `+ Add task`; the mic button appends dictation after any already typed text and stops/reset recording on submit or close.
 
 ## Build & Dev Commands

@@ -25,6 +25,7 @@ export default function WeeklyStrip({ weekDays, onDayClick }: WeeklyStripProps) 
             key={day.dayOfWeek}
             onClick={() => onDayClick(day.dayOfWeek)}
             aria-label={ariaLabel}
+            title={day.theme ? `Edit ${dayName}'s theme` : `Set a theme for ${dayName}`}
             className="flex flex-col items-center gap-0.5 rounded-xl min-w-[44px] min-h-[44px] px-2 py-1.5 transition-all duration-200 cursor-pointer"
             style={{
               background: day.isToday

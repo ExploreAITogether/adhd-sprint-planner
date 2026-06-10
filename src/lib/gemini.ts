@@ -35,6 +35,19 @@ interface GeminiTaskResult {
   tags: string[];
 }
 
+// Matches the add-task and edit-task input limits (120 chars).
+const MAX_TITLE_LENGTH = 120;
+
+/** Truncate at a word boundary with an ellipsis instead of chopping mid-word. */
+function truncateTitle(title: string): string {
+  if (title.length <= MAX_TITLE_LENGTH) return title;
+  const cut = title.slice(0, MAX_TITLE_LENGTH - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  // Only break at the space if it doesn't throw away too much of the title
+  const end = lastSpace > MAX_TITLE_LENGTH * 0.6 ? lastSpace : cut.length;
+  return `${cut.slice(0, end).trimEnd()}…`;
+}
+
 function parseGeminiResponse(responseText: string): GeminiTaskResult[] {
   // Strip markdown code fences if the model wraps its response
   let cleaned = responseText.trim();
@@ -59,7 +72,7 @@ function parseGeminiResponse(responseText: string): GeminiTaskResult[] {
     )
     .slice(0, 5)
     .map((t: GeminiTaskResult) => ({
-      title: t.title.slice(0, 100),
+      title: truncateTitle(t.title),
       emoji: t.emoji || '📝',
       tags: Array.isArray(t.tags)
         ? t.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 3)
