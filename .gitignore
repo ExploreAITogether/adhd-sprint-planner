@@ -139,5 +139,14 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Rust / Tauri
+# Note: src-tauri/Cargo.lock is intentionally committed (this is an application,
+# not a library) so release builds are reproducible.
 src-tauri/target/
-src-tauri/Cargo.lock
+src-tauri/gen/schemas/
+
+# macOS
+.DS_Store
+
+# Local documents (e.g. the old-gemini-api-key.pages note)
+*.pages
+
