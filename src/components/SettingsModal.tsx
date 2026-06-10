@@ -280,7 +280,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
           {/* Footer: app info */}
           <div className="mt-8 pt-5 text-center" style={{ borderTop: '1px solid var(--t-border-light)' }}>
             <p className="text-xs" style={{ color: 'var(--t-text-faint)' }}>
-              ADHD Sprint Planner v1.0
+              ADHD Sprint Planner v1.1
             </p>
           </div>
         </div>
