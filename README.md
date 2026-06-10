@@ -76,7 +76,40 @@ npm run tauri dev
 
 ## Building for Release
 
-### macOS
+### GitHub Actions (recommended — builds both platforms)
+
+The [Release workflow](.github/workflows/release.yml) builds installers for
+**macOS** (universal binary: Apple Silicon + Intel) and **Windows** (.msi and
+.exe) and attaches them to a draft GitHub Release.
+
+**One-time setup:** add a repository secret named `GEMINI_API_KEY` containing
+your Gemini API key (Settings → Secrets and variables → Actions). The key is
+baked into the bundle at build time.
+
+**To cut a release**, either:
+
+```bash
+# Option A: push a version tag
+git tag v1.0.0
+git push origin v1.0.0
+
+# Option B: trigger manually
+gh workflow run release.yml
+```
+
+Then publish the draft release from the GitHub Releases page and download the
+installers:
+
+- **macOS**: open the `.dmg`, drag the app to Applications. The build is
+  unsigned, so the first launch needs right-click → Open (or
+  `xattr -cr "/Applications/ADHD Sprint Planner.app"`).
+- **Windows**: run the `.exe` (NSIS) installer. If SmartScreen appears,
+  click "More info" → "Run anyway".
+
+> Bumping the version: update `version` in `package.json`,
+> `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, then tag to match.
+
+### Local build — macOS
 
 ```bash
 npm run tauri build
@@ -86,7 +119,7 @@ Outputs:
 - `.app` bundle in `src-tauri/target/release/bundle/macos/`
 - `.dmg` installer in `src-tauri/target/release/bundle/dmg/`
 
-### Windows
+### Local build — Windows
 
 ```bash
 npm run tauri build

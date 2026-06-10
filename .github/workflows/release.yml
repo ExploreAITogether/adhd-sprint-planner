@@ -1,0 +1,68 @@
+name: Release
+
+# Builds installers for macOS and Windows and attaches them to a draft
+# GitHub Release. Trigger it manually from the Actions tab, or by pushing
+# a version tag (e.g. `git tag v1.1.0 && git push origin v1.1.0`).
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Universal macOS binary runs natively on both Apple Silicon and Intel
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+          # Produces both .msi (WiX) and .exe (NSIS) installers
+          - platform: windows-latest
+            args: ''
+            rust-targets: ''
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build and upload release artifacts
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Baked into the bundle at build time by Vite (see CLAUDE.md).
+          # Set this repository secret before running: Settings → Secrets
+          # and variables → Actions → New repository secret.
+          VITE_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'ADHD Sprint Planner v__VERSION__'
+          releaseBody: >
+            Download the installer for your platform below.
+            macOS: open the .dmg and drag the app to Applications
+            (unsigned build — right-click the app and choose Open the
+            first time). Windows: run the .exe installer (click
+            "More info" → "Run anyway" if SmartScreen appears).
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
