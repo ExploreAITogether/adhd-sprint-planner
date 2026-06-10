@@ -79,11 +79,20 @@ function CelebrationParticles() {
   )
 }
 
+// 8s gives unhurried time to notice and react; hovering pauses the countdown.
+const UNDO_TOAST_MS = 8000
+
 function UndoToast({ message, onUndo, onDone }: { message: string; onUndo: () => void; onDone: () => void }) {
-  useEffect(() => {
-    const timer = setTimeout(onDone, 4000)
-    return () => clearTimeout(timer)
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  const startTimer = useCallback(() => {
+    timerRef.current = setTimeout(onDone, UNDO_TOAST_MS)
   }, [onDone])
+
+  useEffect(() => {
+    startTimer()
+    return () => clearTimeout(timerRef.current)
+  }, [startTimer])
 
   return (
     <div
@@ -96,6 +105,8 @@ function UndoToast({ message, onUndo, onDone }: { message: string; onUndo: () =>
         color: 'var(--t-text)',
         animation: 'slide-up-fade 300ms ease-out',
       }}
+      onMouseEnter={() => clearTimeout(timerRef.current)}
+      onMouseLeave={startTimer}
     >
       <span>{message}</span>
       <button
@@ -112,7 +123,7 @@ function UndoToast({ message, onUndo, onDone }: { message: string; onUndo: () =>
   )
 }
 
-function ErrorToast({ message, onDone }: { message: string; onDone: () => void }) {
+function ErrorToast({ message, raised, onDone }: { message: string; raised?: boolean; onDone: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onDone, 4000)
     return () => clearTimeout(timer)
@@ -120,8 +131,8 @@ function ErrorToast({ message, onDone }: { message: string; onDone: () => void }
 
   return (
     <div
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
-        rounded-2xl px-5 py-3 text-sm font-medium"
+      className={`fixed ${raised ? 'bottom-20' : 'bottom-6'} left-1/2 -translate-x-1/2 z-50
+        rounded-2xl px-5 py-3 text-sm font-medium`}
       style={{
         backgroundColor: 'var(--t-toast-bg)',
         border: '1px solid var(--t-toast-border)',
@@ -205,6 +216,7 @@ export default function SprintView({
   const [deletedTaskInfo, setDeletedTaskInfo] = useState<{ task: Task; index: number } | null>(null)
   const [showAddInput, setShowAddInput] = useState(false)
   const [addInputValue, setAddInputValue] = useState('')
+  const [confirmingStartFresh, setConfirmingStartFresh] = useState(false)
   const addInputRef = useRef<HTMLInputElement>(null)
   const voiceBaseRef = useRef('')
   const [errorToast, setErrorToast] = useState<string | null>(null)
@@ -480,6 +492,15 @@ export default function SprintView({
   const handleHelp = useCallback((task: Task) => {
     setHelpTask(task)
   }, [])
+
+  // ── Start fresh (abandon partial sprint) ──
+
+  const handleStartFresh = useCallback(() => {
+    updateSprintStatus(sprint.id, 'abandoned').catch((err) =>
+      console.error('Failed to abandon sprint:', err)
+    )
+    onBack()
+  }, [sprint.id, onBack])
 
   // ── Add task ──
 
@@ -889,6 +910,45 @@ export default function SprintView({
             >
               View History
             </button>
+
+            {/* Escape hatch from a partially-done sprint: marks it abandoned
+                instead of leaving a stale active sprint lingering forever. */}
+            {!allDone && tasks.length > 0 && (
+              confirmingStartFresh ? (
+                <div
+                  className="flex items-center justify-center gap-3 text-sm py-1"
+                  style={{ animation: 'slide-up-fade 200ms ease-out' }}
+                >
+                  <span style={{ color: 'var(--t-text-light)' }}>
+                    Leave the rest behind?
+                  </span>
+                  <button
+                    onClick={handleStartFresh}
+                    className="font-medium rounded-lg px-3 py-1 transition-colors duration-150"
+                    style={{ color: 'var(--t-accent)', backgroundColor: 'var(--t-border-light)' }}
+                  >
+                    Yes, start fresh
+                  </button>
+                  <button
+                    onClick={() => setConfirmingStartFresh(false)}
+                    className="rounded-lg px-3 py-1 transition-colors duration-150"
+                    style={{ color: 'var(--t-text-light)' }}
+                  >
+                    Keep going
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmingStartFresh(true)}
+                  className="w-full text-center text-xs py-1.5 transition-colors duration-150"
+                  style={{ color: 'var(--t-text-faint)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--t-text-light)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--t-text-faint)' }}
+                >
+                  Start fresh instead
+                </button>
+              )
+            )}
           </div>
         </div>
       </div>
@@ -908,8 +968,12 @@ export default function SprintView({
         />
       )}
 
-      {errorToast && !deletedTaskInfo && (
-        <ErrorToast message={errorToast} onDone={() => setErrorToast(null)} />
+      {errorToast && (
+        <ErrorToast
+          message={errorToast}
+          raised={!!deletedTaskInfo}
+          onDone={() => setErrorToast(null)}
+        />
       )}
     </div>
   )

@@ -261,3 +261,17 @@
     opacity: 1 !important;
   }
 }
+
+/* Respect the OS-level reduced motion preference: collapse all decorative
+   animations and transitions to near-instant. State changes (completions,
+   toasts, modals) still happen — they just don't animate. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

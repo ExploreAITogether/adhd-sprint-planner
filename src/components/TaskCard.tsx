@@ -113,7 +113,7 @@ const TaskCard = memo(function TaskCard({
         {...attributes}
         {...listeners}
         className="shrink-0 cursor-grab active:cursor-grabbing touch-none
-          opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity duration-200
+          opacity-0 group-hover:opacity-60 group-focus-within:opacity-60 hover:!opacity-100 transition-opacity duration-200
           flex items-center justify-center w-5 h-8 -ml-1 rounded
           task-action-touch"
         style={{ color: 'var(--t-text-faint)' }}
@@ -195,7 +195,7 @@ const TaskCard = memo(function TaskCard({
               color: 'var(--t-text)',
               borderBottom: '2px solid var(--t-accent)',
             }}
-            maxLength={200}
+            maxLength={120}
           />
         ) : (
           <span className="relative inline-flex items-center">
@@ -221,7 +221,7 @@ const TaskCard = memo(function TaskCard({
       {/* Action buttons: edit, help, delete */}
       {!isEditing && (
         <div className="shrink-0 flex items-center gap-1
-          opacity-0 group-hover:opacity-100 transition-opacity duration-200
+          opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200
           task-action-touch">
           {/* Edit button */}
           <button

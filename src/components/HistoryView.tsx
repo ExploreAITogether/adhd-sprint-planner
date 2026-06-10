@@ -3,7 +3,7 @@ import { format, isToday, isYesterday } from 'date-fns'
 import { save } from '@tauri-apps/plugin-dialog'
 import { writeTextFile } from '@tauri-apps/plugin-fs'
 import type { Sprint, Task } from '../types'
-import { getSprintHistory } from '../lib/database'
+import { getSprintHistory, searchSprintHistory } from '../lib/database'
 
 interface HistoryViewProps {
   onBack: () => void
@@ -59,7 +59,9 @@ function groupSprintsByDate(sprints: Sprint[]): DateGroup[] {
     }
   }
 
-  return Array.from(map.values())
+  // Skip days with nothing completed — an empty "0 tasks completed" group
+  // is just noise in a view about what you've done.
+  return Array.from(map.values()).filter((group) => group.completedTasks.length > 0)
 }
 
 // ── Highlight matching text ──
@@ -199,9 +201,38 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
     ? debouncedQuery.slice(1).toLowerCase()
     : debouncedQuery.toLowerCase()
 
+  // Search queries the whole database, not just the pages loaded so far —
+  // otherwise older history is invisible until the user clicks "Load more".
+  // Results are keyed by their query so stale responses are simply ignored.
+  const [search, setSearch] = useState<{ term: string; tag: boolean; results: Sprint[] } | null>(null)
+
+  useEffect(() => {
+    if (!searchTerm) return
+
+    let cancelled = false
+    searchSprintHistory(searchTerm, isTagSearch)
+      .then((results) => {
+        if (!cancelled) setSearch({ term: searchTerm, tag: isTagSearch, results })
+      })
+      .catch((err) => {
+        console.error('Failed to search history:', err)
+        // The in-memory fallback below still covers loaded pages
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [searchTerm, isTagSearch])
+
+  const searchResults =
+    search && search.term === searchTerm && search.tag === isTagSearch
+      ? search.results
+      : null
+
   const filteredSprints = useMemo(() => {
     if (!searchTerm) return sprints
+    if (searchResults) return searchResults
 
+    // Fallback while the DB search is in flight (or failed): filter loaded pages
     return sprints
       .map((sprint) => ({
         ...sprint,
@@ -216,7 +247,7 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
         }),
       }))
       .filter((sprint) => sprint.tasks.length > 0)
-  }, [sprints, searchTerm, isTagSearch])
+  }, [sprints, searchTerm, isTagSearch, searchResults])
 
   const dateGroups = useMemo(
     () => groupSprintsByDate(filteredSprints),

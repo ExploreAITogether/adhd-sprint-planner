@@ -16,6 +16,16 @@ interface LandingScreenProps {
 
 const MAX_INPUT_LENGTH = 5000
 
+// Shown in sequence while the AI parses, so a slow response (up to 30s)
+// doesn't feel frozen. The last message holds until parsing finishes.
+const LOADING_MESSAGES = [
+  'Thinking...',
+  'Sorting your thoughts...',
+  'Finding the tasks in there...',
+  'Almost there...',
+]
+const LOADING_MESSAGE_INTERVAL_MS = 5000
+
 function voiceErrorMessage(error: SpeechError): string {
   switch (error) {
     case 'permission-denied':
@@ -36,6 +46,9 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [voiceError, setVoiceError] = useState<string | null>(null)
   const [isMac, setIsMac] = useState(false)
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
+  // Text already in the textarea when recording starts; dictation appends to it.
+  const voiceBaseRef = useRef('')
 
   // Detect OS for keyboard shortcut hint
   useEffect(() => {
@@ -64,13 +77,23 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
     autoResize()
   }, [input, autoResize])
 
-  // Sync speech transcript into the textarea
+  // Sync speech transcript into the textarea, appended after any typed text
   useEffect(() => {
     if (transcript || interimTranscript) {
-      const combined = transcript + (interimTranscript ? interimTranscript : '')
-      setInput(combined)
+      const combined = `${voiceBaseRef.current}${transcript}${interimTranscript}`
+      setInput(combined.slice(0, MAX_INPUT_LENGTH))
     }
   }, [transcript, interimTranscript])
+
+  // Walk through the loading messages while the AI is parsing
+  useEffect(() => {
+    if (!isLoading) return
+    const interval = setInterval(
+      () => setLoadingMsgIndex((i) => Math.min(i + 1, LOADING_MESSAGES.length - 1)),
+      LOADING_MESSAGE_INTERVAL_MS
+    )
+    return () => clearInterval(interval)
+  }, [isLoading])
 
   // Show speech errors as voice error messages
   useEffect(() => {
@@ -82,6 +105,8 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
   const handleSubmit = () => {
     const trimmed = input.trim()
     if (trimmed.length === 0 || isLoading) return
+    if (isListening) stopListening()
+    setLoadingMsgIndex(0)
     onSubmit(trimmed)
   }
 
@@ -106,7 +131,8 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
       stopListening()
     } else {
       resetTranscript()
-      setInput('')
+      // Preserve anything already typed — dictation appends after it
+      voiceBaseRef.current = input.trim() ? `${input.trim()} ` : ''
       startListening()
     }
   }
@@ -114,6 +140,7 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
   const handleClear = () => {
     setInput('')
     resetTranscript()
+    voiceBaseRef.current = ''
     setVoiceError(null)
     if (textareaRef.current) {
       textareaRef.current.focus()
@@ -359,7 +386,7 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Thinking...
+                  {LOADING_MESSAGES[loadingMsgIndex]}
                 </span>
               ) : (
                 <span>&#x2728; Make tasks</span>

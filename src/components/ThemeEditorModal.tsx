@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import type { DayTheme } from '../types'
 
 interface ThemeEditorModalProps {
@@ -67,33 +68,7 @@ export default function ThemeEditorModal({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [isOpen, handleClose])
 
-  // Focus trap
-  useEffect(() => {
-    if (!isOpen || isClosing) return
-
-    function handleTab(e: KeyboardEvent) {
-      if (e.key !== 'Tab' || !modalRef.current) return
-
-      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
-        'button, input, [tabindex]:not([tabindex="-1"])'
-      )
-      if (focusable.length === 0) return
-
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault()
-        last.focus()
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault()
-        first.focus()
-      }
-    }
-
-    document.addEventListener('keydown', handleTab)
-    return () => document.removeEventListener('keydown', handleTab)
-  }, [isOpen, isClosing])
+  useFocusTrap(modalRef, isOpen && !isClosing)
 
   // Backdrop click
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {

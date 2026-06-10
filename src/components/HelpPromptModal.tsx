@@ -2,17 +2,20 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Task } from '../types'
 import { generateHelpPrompt } from '../lib/promptGenerator'
 import { updateTaskPrompt } from '../lib/database'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 interface HelpPromptModalProps {
   task: Task
   onClose: () => void
 }
 
-type ModalState = 'loading' | 'cached-choice' | 'success' | 'error'
+type ModalState = 'loading' | 'success' | 'error'
 
 export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps) {
+  // A cached prompt is shown immediately — one less decision for the user.
+  // The regenerate button on the success view covers the "give me a new one" case.
   const [state, setState] = useState<ModalState>(
-    task.generated_prompt ? 'cached-choice' : 'loading'
+    task.generated_prompt ? 'success' : 'loading'
   )
   const [prompt, setPrompt] = useState(task.generated_prompt ?? '')
   const [error, setError] = useState('')
@@ -68,10 +71,6 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
     }
   }, [task])
 
-  const handleShowCached = useCallback(() => {
-    setState('success')
-  }, [])
-
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(prompt)
@@ -122,6 +121,8 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
       handleClose()
     }
   }, [handleClose])
+
+  useFocusTrap(modalRef, !isClosing)
 
   useEffect(() => {
     if (textAreaRef.current && state === 'success') {
@@ -198,40 +199,6 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
                       />
                     ))}
                   </span>
-                </div>
-              </div>
-            )}
-
-            {state === 'cached-choice' && (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm" style={{ color: 'var(--t-text-light)' }}>
-                  You have a saved prompt for this task. What would you like to do?
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleShowCached}
-                    className="flex-1 rounded-xl py-2.5 px-4 text-sm font-medium text-white
-                      active:scale-[0.98] transition-all duration-200"
-                    style={{
-                      background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
-                    }}
-                  >
-                    Show saved prompt
-                  </button>
-                  <button
-                    onClick={handleGenerate}
-                    className="flex-1 rounded-xl py-2.5 px-4 text-sm font-medium
-                      active:scale-[0.98] transition-all duration-200"
-                    style={{
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                      borderColor: 'var(--t-border)',
-                      backgroundColor: 'var(--t-card-inner)',
-                      color: 'var(--t-text-light)',
-                    }}
-                  >
-                    Generate new
-                  </button>
                 </div>
               </div>
             )}

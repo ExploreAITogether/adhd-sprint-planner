@@ -421,6 +421,68 @@ export async function getSprintHistory(
   return { sprints: result, hasMore };
 }
 
+/** Escape SQL LIKE wildcards so user input matches literally. */
+function escapeLike(term: string): string {
+  return term.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+interface SearchRow extends TaskRow {
+  sprint_created_at: string;
+  sprint_status: string;
+  sprint_raw_input: string;
+}
+
+/**
+ * Search the entire task history (not just loaded pages).
+ *
+ * - Default search: substring match on title or tags.
+ * - Tag search (tagOnly): exact tag match, located via its quoted form
+ *   inside the stored JSON array (e.g. `["email","work"]`).
+ *
+ * Returns sprints containing only their matching tasks, newest first.
+ */
+export async function searchSprintHistory(
+  term: string,
+  tagOnly: boolean
+): Promise<Sprint[]> {
+  const database = await getDb();
+  const escaped = escapeLike(term.toLowerCase());
+
+  const rows = tagOnly
+    ? await database.select<SearchRow[]>(
+        `SELECT t.*, s.created_at AS sprint_created_at, s.status AS sprint_status, s.raw_input AS sprint_raw_input
+         FROM tasks t JOIN sprints s ON s.id = t.sprint_id
+         WHERE LOWER(t.tags) LIKE $1 ESCAPE '\\'
+         ORDER BY s.created_at DESC, t.position ASC`,
+        [`%"${escaped}"%`]
+      )
+    : await database.select<SearchRow[]>(
+        `SELECT t.*, s.created_at AS sprint_created_at, s.status AS sprint_status, s.raw_input AS sprint_raw_input
+         FROM tasks t JOIN sprints s ON s.id = t.sprint_id
+         WHERE LOWER(t.title) LIKE $1 ESCAPE '\\' OR LOWER(t.tags) LIKE $1 ESCAPE '\\'
+         ORDER BY s.created_at DESC, t.position ASC`,
+        [`%${escaped}%`]
+      );
+
+  const sprintsById = new Map<string, Sprint>();
+  for (const row of rows) {
+    let sprint = sprintsById.get(row.sprint_id);
+    if (!sprint) {
+      sprint = {
+        id: row.sprint_id,
+        created_at: row.sprint_created_at,
+        status: parseSprintStatus(row.sprint_status),
+        raw_input: row.sprint_raw_input,
+        tasks: [],
+      };
+      sprintsById.set(row.sprint_id, sprint);
+    }
+    sprint.tasks.push(mapTaskRow(row));
+  }
+
+  return Array.from(sprintsById.values());
+}
+
 export async function getSettings(): Promise<Settings> {
   const database = await getDb();
 
