@@ -23,6 +23,8 @@ export async function initDatabase(): Promise<void> {
     )
   `);
 
+  // Note: the FOREIGN KEY below is enforced — sqlx (used by tauri-plugin-sql)
+  // sets PRAGMA foreign_keys = ON on every connection by default.
   await database.execute(`
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
@@ -36,6 +38,15 @@ export async function initDatabase(): Promise<void> {
       FOREIGN KEY (sprint_id) REFERENCES sprints(id)
     )
   `);
+
+  // idx_tasks_sprint_id: hit by every sprint load (tasks WHERE sprint_id = ?).
+  // idx_tasks_status_completed: hit by getWeekDays on every task toggle.
+  await database.execute(
+    'CREATE INDEX IF NOT EXISTS idx_tasks_sprint_id ON tasks(sprint_id)'
+  );
+  await database.execute(
+    'CREATE INDEX IF NOT EXISTS idx_tasks_status_completed ON tasks(status, completed_at)'
+  );
 
   await database.execute(`
     CREATE TABLE IF NOT EXISTS settings (
@@ -147,22 +158,75 @@ function mapTaskRow(row: TaskRow): Task {
   };
 }
 
-export async function createSprint(rawInput: string): Promise<Sprint> {
+/**
+ * Create a sprint and its tasks as a near-atomic unit.
+ *
+ * tauri-plugin-sql runs each execute() on a pooled connection (pool size 10),
+ * so BEGIN/COMMIT across separate calls is unsafe — statements can land on
+ * different connections. Instead, all tasks are inserted in a single
+ * multi-row statement, and if that fails the sprint row is removed so no
+ * partial sprint is left behind as the "active" sprint.
+ */
+export async function createSprintWithTasks(
+  rawInput: string,
+  tasks: Omit<Task, 'id' | 'sprint_id' | 'position'>[]
+): Promise<Sprint> {
   const database = await getDb();
-  const id = uuidv4();
+  const sprintId = uuidv4();
   const createdAt = new Date().toISOString();
 
   await database.execute(
     'INSERT INTO sprints (id, created_at, status, raw_input) VALUES ($1, $2, $3, $4)',
-    [id, createdAt, 'active', rawInput]
+    [sprintId, createdAt, 'active', rawInput]
   );
 
+  if (tasks.length === 0) {
+    return { id: sprintId, created_at: createdAt, status: 'active', raw_input: rawInput, tasks: [] };
+  }
+
+  const savedTasks: Task[] = tasks.map((task, i) => ({
+    ...task,
+    id: uuidv4(),
+    sprint_id: sprintId,
+    position: i,
+  }));
+
+  const placeholders = savedTasks
+    .map((_, i) => {
+      const base = i * 9;
+      return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9})`;
+    })
+    .join(', ');
+  const values = savedTasks.flatMap((t) => [
+    t.id,
+    t.sprint_id,
+    t.title,
+    t.emoji,
+    JSON.stringify(t.tags),
+    t.status,
+    t.completed_at,
+    t.generated_prompt,
+    t.position,
+  ]);
+
+  try {
+    await database.execute(
+      `INSERT INTO tasks (id, sprint_id, title, emoji, tags, status, completed_at, generated_prompt, position)
+       VALUES ${placeholders}`,
+      values
+    );
+  } catch (err) {
+    // Compensating cleanup: don't leave a task-less active sprint behind.
+    await database.execute('DELETE FROM sprints WHERE id = $1', [sprintId]).catch(() => {});
+    throw err;
+  }
+
   return {
-    id,
+    id: sprintId,
     created_at: createdAt,
     status: 'active',
     raw_input: rawInput,
-    tasks: [],
+    tasks: savedTasks,
   };
 }
 
@@ -243,12 +307,10 @@ export async function updateTaskStatus(
   completedAt?: string
 ): Promise<void> {
   const database = await getDb();
-  console.log('[DB] updateTaskStatus:', { id, status, completedAt: completedAt ?? null });
   await database.execute(
     'UPDATE tasks SET status = $1, completed_at = $2 WHERE id = $3',
     [status, completedAt ?? null, id]
   );
-  console.log('[DB] updateTaskStatus: write confirmed for task', id);
 }
 
 export async function updateTaskTitle(

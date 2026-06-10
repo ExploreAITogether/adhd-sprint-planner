@@ -68,13 +68,15 @@ function HighlightText({ text, query }: { text: string; query: string }) {
   if (!query.trim()) return <>{text}</>
 
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const regex = new RegExp(`(${escaped})`, 'gi')
-  const parts = text.split(regex)
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'))
 
+  // split() with a capturing group places matched text at odd indices, so the
+  // index alone identifies matches. Re-testing with a `g` regex would be wrong:
+  // its lastIndex persists between .test() calls, silently skipping matches.
   return (
     <>
       {parts.map((part, i) =>
-        regex.test(part) ? (
+        i % 2 === 1 ? (
           <mark
             key={i}
             className="rounded-sm px-0.5"

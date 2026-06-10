@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { initDatabase, createSprint, addTask, getActiveSprint, getSprintById, getWeekDays, setDayTheme, clearDayTheme } from './lib/database'
+import { initDatabase, createSprintWithTasks, getActiveSprint, getSprintById, getWeekDays, setDayTheme, clearDayTheme } from './lib/database'
 import { parseBrainDump } from './lib/gemini'
 import { ThemeProvider } from './contexts/ThemeContext'
 import LandingScreen from './components/LandingScreen'
@@ -99,18 +99,10 @@ function AppContent() {
         return
       }
 
-      // 2. Create sprint in database
-      const sprint = await createSprint(rawInput)
+      // 2. Create sprint + tasks in the database as one near-atomic write
+      const fullSprint: Sprint = await createSprintWithTasks(rawInput, parsedTasks)
 
-      // 3. Add each task to the database with position
-      const savedTasks = []
-      for (let i = 0; i < parsedTasks.length; i++) {
-        const saved = await addTask(sprint.id, parsedTasks[i], i)
-        savedTasks.push(saved)
-      }
-
-      // 4. Update local state and switch view
-      const fullSprint: Sprint = { ...sprint, tasks: savedTasks }
+      // 3. Update local state and switch view
       setActiveSprint(fullSprint)
       setView('sprint')
     } catch (err) {

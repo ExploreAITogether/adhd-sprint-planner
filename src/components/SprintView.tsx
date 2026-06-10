@@ -278,73 +278,76 @@ export default function SprintView({
 
   // ── Task toggle ──
 
+  // Note: these handlers read `tasks` directly rather than using setTasks
+  // updater functions, because React requires updaters to be pure — DB writes,
+  // sounds, and sibling setState calls inside them double-fire under StrictMode.
   const handleToggle = useCallback((taskId: string) => {
-    setTasks((prev) => {
-      const task = prev.find((t) => t.id === taskId)
-      if (!task) return prev
+    const task = tasks.find((t) => t.id === taskId)
+    if (!task) return
 
-      const wasCompleted = task.status === 'completed'
-      const newStatus = wasCompleted ? 'pending' : 'completed'
-      const now = new Date().toISOString()
-      const previousTasks = prev
+    const wasCompleted = task.status === 'completed'
+    const newStatus: Task['status'] = wasCompleted ? 'pending' : 'completed'
+    const now = new Date().toISOString()
+    const previousTasks = tasks
 
-      updateTaskStatus(taskId, newStatus, newStatus === 'completed' ? now : undefined).catch(
-        (err) => {
-          console.error('Failed to update task:', err)
-          setTasks(previousTasks)
-          onTaskToggle?.(taskId, wasCompleted ? 'completed' : 'pending')
-          setErrorToast('Failed to update task. Change has been reverted.')
-        }
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? { ...t, status: newStatus, completed_at: newStatus === 'completed' ? now : null }
+          : t
       )
+    )
 
-      onTaskToggle?.(taskId, newStatus)
+    updateTaskStatus(taskId, newStatus, newStatus === 'completed' ? now : undefined).catch(
+      (err) => {
+        console.error('Failed to update task:', err)
+        setTasks(previousTasks)
+        onTaskToggle?.(taskId, wasCompleted ? 'completed' : 'pending')
+        setErrorToast('Failed to update task. Change has been reverted.')
+      }
+    )
 
-      if (newStatus === 'completed') {
-        setJustCompleted((s) => new Set(s).add(taskId))
-        playCompleteSound(soundEnabled)
+    onTaskToggle?.(taskId, newStatus)
 
-        const existing = animTimers.current.get(taskId)
-        if (existing) clearTimeout(existing)
-        const timer = setTimeout(() => {
-          setJustCompleted((s) => {
-            const next = new Set(s)
-            next.delete(taskId)
-            return next
-          })
-          animTimers.current.delete(taskId)
-        }, 700)
-        animTimers.current.set(taskId, timer)
+    if (newStatus === 'completed') {
+      setJustCompleted((s) => new Set(s).add(taskId))
+      playCompleteSound(soundEnabled)
 
-        // Check if this was the last pending task: if every *other* task is
-        // already completed, toggling this one completes the entire sprint.
-        const allOthersComplete = prev.every(
-          (t) => t.id === taskId || t.status === 'completed'
-        )
-        if (allOthersComplete) {
-          updateSprintStatus(sprint.id, 'completed').catch((err) =>
-            console.error('Failed to update sprint status:', err)
-          )
-        }
-      } else {
+      const existing = animTimers.current.get(taskId)
+      if (existing) clearTimeout(existing)
+      const timer = setTimeout(() => {
         setJustCompleted((s) => {
           const next = new Set(s)
           next.delete(taskId)
           return next
         })
-        setCelebrating(false)
+        animTimers.current.delete(taskId)
+      }, 700)
+      animTimers.current.set(taskId, timer)
 
-        updateSprintStatus(sprint.id, 'active').catch((err) =>
+      // Check if this was the last pending task: if every *other* task is
+      // already completed, toggling this one completes the entire sprint.
+      const allOthersComplete = tasks.every(
+        (t) => t.id === taskId || t.status === 'completed'
+      )
+      if (allOthersComplete) {
+        updateSprintStatus(sprint.id, 'completed').catch((err) =>
           console.error('Failed to update sprint status:', err)
         )
       }
+    } else {
+      setJustCompleted((s) => {
+        const next = new Set(s)
+        next.delete(taskId)
+        return next
+      })
+      setCelebrating(false)
 
-      return prev.map((t) =>
-        t.id === taskId
-          ? { ...t, status: newStatus, completed_at: newStatus === 'completed' ? now : null }
-          : t
+      updateSprintStatus(sprint.id, 'active').catch((err) =>
+        console.error('Failed to update sprint status:', err)
       )
-    })
-  }, [sprint.id, soundEnabled, onTaskToggle])
+    }
+  }, [tasks, sprint.id, soundEnabled, onTaskToggle])
 
   // ── Task edit ──
 
@@ -357,24 +360,23 @@ export default function SprintView({
   }, [])
 
   const handleEdit = useCallback((taskId: string, newTitle: string) => {
-    setTasks((prev) => {
-      const oldTask = prev.find((t) => t.id === taskId)
-      const oldTitle = oldTask?.title ?? newTitle
+    const oldTask = tasks.find((t) => t.id === taskId)
+    const oldTitle = oldTask?.title ?? newTitle
 
-      updateTaskTitle(taskId, newTitle).catch((err) => {
-        console.error('Failed to update task title:', err)
-        setTasks((current) =>
-          current.map((t) => (t.id === taskId ? { ...t, title: oldTitle } : t))
-        )
-        onTaskEdit?.(taskId, oldTitle)
-        setErrorToast('Failed to save edit. Change has been reverted.')
-      })
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, title: newTitle } : t)))
 
-      return prev.map((t) => (t.id === taskId ? { ...t, title: newTitle } : t))
+    updateTaskTitle(taskId, newTitle).catch((err) => {
+      console.error('Failed to update task title:', err)
+      setTasks((current) =>
+        current.map((t) => (t.id === taskId ? { ...t, title: oldTitle } : t))
+      )
+      onTaskEdit?.(taskId, oldTitle)
+      setErrorToast('Failed to save edit. Change has been reverted.')
     })
+
     onTaskEdit?.(taskId, newTitle)
     setEditingTaskId(null)
-  }, [onTaskEdit])
+  }, [tasks, onTaskEdit])
 
   // ── Task delete with undo ──
 
@@ -385,32 +387,30 @@ export default function SprintView({
     // Delay removal to let the CSS slide-out animation finish (300ms matches
     // the task-slide-out keyframe duration defined in index.css).
     setTimeout(() => {
-      setTasks((prev) => {
-        const index = prev.findIndex((t) => t.id === taskId)
-        if (index === -1) return prev
+      setDeletingTaskId(null)
 
-        const task = prev[index]
+      const index = tasks.findIndex((t) => t.id === taskId)
+      if (index === -1) return
 
-        dbDeleteTask(taskId).catch((err) => {
-          console.error('Failed to delete task:', err)
-          setTasks((current) => {
-            const restored = [...current]
-            restored.splice(Math.min(index, current.length), 0, task)
-            return restored
-          })
-          setDeletedTaskInfo(null)
-          setErrorToast('Failed to delete task. It has been restored.')
+      const task = tasks[index]
+
+      setTasks((prev) => prev.filter((t) => t.id !== taskId))
+
+      dbDeleteTask(taskId).catch((err) => {
+        console.error('Failed to delete task:', err)
+        setTasks((current) => {
+          const restored = [...current]
+          restored.splice(Math.min(index, current.length), 0, task)
+          return restored
         })
-
-        onTaskDelete?.(taskId)
-        setDeletedTaskInfo({ task, index })
-
-        return prev.filter((t) => t.id !== taskId)
+        setDeletedTaskInfo(null)
+        setErrorToast('Failed to delete task. It has been restored.')
       })
 
-      setDeletingTaskId(null)
+      onTaskDelete?.(taskId)
+      setDeletedTaskInfo({ task, index })
     }, 300)
-  }, [onTaskDelete])
+  }, [tasks, onTaskDelete])
 
   const handleUndo = useCallback(() => {
     if (!deletedTaskInfo) return
@@ -425,22 +425,15 @@ export default function SprintView({
       setErrorToast('Failed to restore task.')
     })
 
-    // Restore to local state at original position
-    setTasks((prev) => {
-      const restored = [...prev]
-      restored.splice(Math.min(index, prev.length), 0, task)
-      return restored
-    })
-
-    // Notify parent by providing full restored list
-    // Parent will get the task back via onTasksReorder
-    setTasks((prev) => {
-      onTasksReorder?.(prev)
-      return prev
-    })
+    // Restore to local state at original position, then notify parent with
+    // the full restored list so it gets the task back via onTasksReorder.
+    const restored = [...tasks]
+    restored.splice(Math.min(index, tasks.length), 0, task)
+    setTasks(restored)
+    onTasksReorder?.(restored)
 
     setDeletedTaskInfo(null)
-  }, [deletedTaskInfo, onTasksReorder])
+  }, [deletedTaskInfo, tasks, onTasksReorder])
 
   const handleUndoDone = useCallback(() => {
     setDeletedTaskInfo(null)
@@ -452,31 +445,27 @@ export default function SprintView({
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    setTasks((prev) => {
-      const oldIndex = prev.findIndex((t) => t.id === active.id)
-      const newIndex = prev.findIndex((t) => t.id === String(over.id))
-      const reordered = arrayMove(prev, oldIndex, newIndex)
+    const oldIndex = tasks.findIndex((t) => t.id === active.id)
+    const newIndex = tasks.findIndex((t) => t.id === String(over.id))
+    if (oldIndex === -1 || newIndex === -1) return
 
-      // Update positions
-      const positioned = reordered.map((t, i) => ({ ...t, position: i }))
-      const previousTasks = prev
+    const reordered = arrayMove(tasks, oldIndex, newIndex)
+    const positioned = reordered.map((t, i) => ({ ...t, position: i }))
+    const previousTasks = tasks
 
-      // Save to DB
-      updateTaskPositions(positioned.map((t, i) => ({ id: t.id, position: i }))).catch(
-        (err) => {
-          console.error('Failed to update positions:', err)
-          setTasks(previousTasks)
-          onTasksReorder?.(previousTasks)
-          setErrorToast('Failed to reorder tasks. Order has been reverted.')
-        }
-      )
+    setTasks(positioned)
 
-      // Notify parent
-      onTasksReorder?.(positioned)
+    updateTaskPositions(positioned.map((t, i) => ({ id: t.id, position: i }))).catch(
+      (err) => {
+        console.error('Failed to update positions:', err)
+        setTasks(previousTasks)
+        onTasksReorder?.(previousTasks)
+        setErrorToast('Failed to reorder tasks. Order has been reverted.')
+      }
+    )
 
-      return positioned
-    })
-  }, [onTasksReorder])
+    onTasksReorder?.(positioned)
+  }, [tasks, onTasksReorder])
 
   // ── Other handlers ──
 
