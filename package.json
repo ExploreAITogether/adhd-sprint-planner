@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "deploy:windows": "powershell -ExecutionPolicy Bypass -File scripts/deploy-windows.ps1",
+    "shortcut:windows": "powershell -ExecutionPolicy Bypass -File scripts/install-windows-deploy-shortcut.ps1"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

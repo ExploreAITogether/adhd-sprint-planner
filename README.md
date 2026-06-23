@@ -97,6 +97,22 @@ Outputs:
 - `.msi` installer in `src-tauri/target/release/bundle/msi/`
 - NSIS installer in `src-tauri/target/release/bundle/nsis/`
 
+### One-Click Windows Deploy Shortcut
+
+On Windows, create a Desktop shortcut that pulls the latest repo changes, builds the Tauri release, and copies the generated app/installer files to a Desktop folder named `ADHD Sprint Planner`:
+
+```powershell
+npm run shortcut:windows
+```
+
+After that, double-click **Deploy ADHD Sprint Planner** on the Desktop whenever you want to rebuild the app. The shortcut runs:
+
+```powershell
+npm run deploy:windows -- -Pull
+```
+
+The deploy script leaves build artifacts in Tauri's normal release folders and copies the Windows `.exe`, `.msi`, and NSIS setup `.exe` files to `Desktop\ADHD Sprint Planner`.
+
 ### Code Signing (Optional)
 
 For distribution outside personal use:
