@@ -14,7 +14,7 @@ ADHD Sprint Planner is a desktop app that turns messy brain dumps into clear, ac
 src/
 ├── App.tsx                  # Root component, view router, sprint state management
 ├── main.tsx                 # React entry point
-├── index.css                # Tailwind config, CSS custom properties for theming
+├── index.css                # Tailwind config, theme tokens, shared component classes
 ├── App.css                  # App-specific styles
 ├── components/
 │   ├── LandingScreen.tsx    # Brain dump textarea + voice input + today theme
@@ -25,6 +25,10 @@ src/
 │   ├── ThemeEditorModal.tsx # Modal to set/edit/clear a day's theme
 │   ├── HelpPromptModal.tsx  # AI-generated help prompts for tasks
 │   ├── SettingsModal.tsx    # Theme, sound, export path settings
+│   ├── ModalShell.tsx       # Shared modal backdrop + panel + close button
+│   ├── Toast.tsx            # Shared toast (neutral/success/error, optional action)
+│   ├── TodayThemeChip.tsx   # Today's day-theme pill above view headings
+│   ├── icons.tsx            # Shared SVG icon set (use these, not emoji, for UI icons)
 │   └── ErrorBoundary.tsx    # Global error handler
 ├── lib/
 │   ├── database.ts          # All SQLite CRUD operations + getWeekDays helper
@@ -119,10 +123,14 @@ src-tauri/
 - Migrations wrapped in try/catch (column-exists errors are silently caught)
 
 ### Styling
-- Tailwind CSS v4 with `@theme` block in `index.css` defining custom colors
+- Tailwind CSS v4; `@theme` in `index.css` sets `--font-sans` (Inter) and `--font-display` (Fraunces)
+- Fonts are bundled via `@fontsource-variable/*`, imported in `main.tsx` (not `index.css` — Tailwind inlines CSS imports without rebasing font URLs, which breaks the production build). The CSP only allows `font-src 'self'`.
 - Dual theme system: `--t-*` CSS custom properties for light/dark mode
 - Dark mode applied by toggling `.theme-dark` class on `<html>`
 - `ThemeContext` provides resolved theme + toggle via React context
+- Shared component classes in `index.css` (`@layer components`): `app-bg` (aurora page background), `glass-card`, `surface`, `btn` + `btn-primary|secondary|ghost|soft|danger`, `icon-btn`, `field`, `chip`, `kbd`, `emoji-tile`, `segmented`, `toast`, `modal-panel`, `task-card`, `strike`. Put hover/focus states in these classes — don't mutate styles in `onMouseEnter`/`onMouseLeave`.
+- Headings use `font-display`. Keyboard focus uses a global `:focus-visible` outline; don't add `focus:ring-*` per element.
+- The aurora background is intentionally static (an animated background under `backdrop-filter` costs GPU continuously).
 
 ### Component Patterns
 - No external state management (no Redux/Zustand) — `useState` + callback props

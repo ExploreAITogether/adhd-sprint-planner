@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { Task } from '../types'
+import { GripIcon, PencilIcon, TrashIcon, WandIcon } from './icons'
 
 interface TaskCardProps {
   task: Task
@@ -78,78 +79,50 @@ const TaskCard = memo(function TaskCard({
   return (
     <div
       ref={setNodeRef}
-      style={{
-        ...style,
-        backgroundColor: 'var(--t-card-inner)',
-        boxShadow: isDragging ? '0 8px 24px rgba(0,0,0,0.15)' : 'var(--t-shadow-sm)',
-        borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: isDragging ? 'var(--t-accent)' : 'var(--t-card-inner-border)',
-      }}
-      className={`w-full flex items-center gap-3 rounded-2xl px-3 py-4 sm:px-4 text-left
+      style={style}
+      data-completed={isCompleted}
+      data-dragging={isDragging}
+      className={`task-card w-full flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left
         group relative
-        ${isDragging ? 'z-10 scale-[1.02]' : ''}
-        ${isCompleted && !isDragging ? 'opacity-60' : ''}
+        ${isDragging ? 'z-10' : ''}
         ${isDeleting ? 'animate-[task-slide-out_300ms_ease-in_forwards]' : ''}
-        ${justCompleted
-          ? 'animate-[card-complete_400ms_ease-out]'
-          : 'transition-all duration-200 ease-out'
-        }`}
-      onMouseEnter={(e) => {
-        if (!isDragging) {
-          e.currentTarget.style.boxShadow = 'var(--t-shadow-sm-hover)'
-          e.currentTarget.style.borderColor = 'var(--t-border)'
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isDragging) {
-          e.currentTarget.style.boxShadow = 'var(--t-shadow-sm)'
-          e.currentTarget.style.borderColor = 'var(--t-card-inner-border)'
-        }
-      }}
+        ${justCompleted ? 'animate-[card-complete_400ms_ease-out]' : ''}`}
     >
-      {/* Drag handle */}
+      {/* Drag handle — sits in the gutter just outside the card */}
       <div
         {...attributes}
         {...listeners}
-        className="shrink-0 cursor-grab active:cursor-grabbing touch-none
+        className="absolute -left-[18px] top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing touch-none
           opacity-0 group-hover:opacity-60 group-focus-within:opacity-60 hover:!opacity-100 transition-opacity duration-200
-          flex items-center justify-center w-5 h-8 -ml-1 rounded
+          flex items-center justify-center w-4 h-8 rounded
           task-action-touch"
         style={{ color: 'var(--t-text-faint)' }}
         title="Drag to reorder"
       >
-        <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
-          <circle cx="3" cy="2" r="1.5" />
-          <circle cx="7" cy="2" r="1.5" />
-          <circle cx="3" cy="8" r="1.5" />
-          <circle cx="7" cy="8" r="1.5" />
-          <circle cx="3" cy="14" r="1.5" />
-          <circle cx="7" cy="14" r="1.5" />
-        </svg>
+        <GripIcon size={14} />
       </div>
 
       {/* Checkbox */}
       <button
         type="button"
         onClick={() => onToggle(task.id)}
-        className="shrink-0 relative w-6 h-6 focus:outline-none"
-        aria-label={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+        className="group/check shrink-0 relative w-7 h-7 rounded-full"
+        aria-label={isCompleted ? `Mark "${task.title}" as incomplete` : `Mark "${task.title}" as complete`}
       >
         {justCompleted && (
-          <div
-            className="absolute inset-[-4px] rounded-full pointer-events-none"
-            style={{ border: '2px solid var(--t-green)', animation: 'check-burst 400ms ease-out forwards' }}
+          <span
+            className="absolute inset-[-3px] rounded-full pointer-events-none"
+            style={{ border: '2px solid var(--t-green)', animation: 'check-burst 450ms ease-out forwards' }}
           />
         )}
 
-        <div
-          className={`w-6 h-6 rounded-full flex items-center justify-center relative overflow-hidden
-            ${isCompleted ? '' : 'transition-colors duration-200'}`}
-          style={isCompleted ? undefined : { border: '2px solid var(--t-border)' }}
+        <span
+          className={`absolute inset-0 rounded-full flex items-center justify-center overflow-hidden
+            transition-colors duration-200
+            ${isCompleted ? '' : 'border-2 border-[var(--t-border)] group-hover/check:border-[var(--t-green)]'}`}
         >
           {isCompleted && (
-            <div
+            <span
               className="absolute inset-0 rounded-full"
               style={{
                 backgroundColor: 'var(--t-green)',
@@ -158,31 +131,38 @@ const TaskCard = memo(function TaskCard({
             />
           )}
 
-          {isCompleted && (
-            <svg
-              className="w-3.5 h-3.5 text-white relative z-10"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline
-                points="20 6 9 17 4 12"
-                style={justCompleted
-                  ? { strokeDasharray: 24, animation: 'check-draw 250ms ease-out 150ms both' }
-                  : undefined
-                }
-              />
-            </svg>
-          )}
-        </div>
+          <svg
+            className={`w-3.5 h-3.5 relative z-10 transition-opacity duration-150
+              ${isCompleted ? 'text-white' : 'opacity-0 group-hover/check:opacity-70'}`}
+            style={isCompleted ? undefined : { color: 'var(--t-green)' }}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline
+              points="20 6 9 17 4 12"
+              style={justCompleted
+                ? { strokeDasharray: 24, animation: 'check-draw 250ms ease-out 150ms both' }
+                : undefined
+              }
+            />
+          </svg>
+        </span>
       </button>
 
       {/* Emoji + Title (or edit input) */}
-      <div className="flex-1 min-w-0 flex items-center gap-2.5">
-        <span className="text-lg leading-none shrink-0">{task.emoji}</span>
+      <div className="flex-1 min-w-0 flex items-center gap-3">
+        <span
+          className="emoji-tile transition-opacity duration-300"
+          style={isCompleted ? { opacity: 0.5 } : undefined}
+          aria-hidden="true"
+        >
+          {task.emoji}
+        </span>
         {isEditing ? (
           <input
             ref={editRef}
@@ -190,106 +170,63 @@ const TaskCard = memo(function TaskCard({
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleEditSave}
             onKeyDown={handleEditKeyDown}
-            className="flex-1 text-[15px] leading-snug bg-transparent outline-none px-1 py-0.5 rounded"
-            style={{
-              color: 'var(--t-text)',
-              borderBottom: '2px solid var(--t-accent)',
-            }}
+            aria-label="Task title"
+            className="field flex-1 min-w-0 text-[15px] leading-snug rounded-lg px-2.5 py-1.5"
             maxLength={120}
           />
         ) : (
-          <span className="relative inline-flex items-center">
-            <span
-              className="text-[15px] leading-snug transition-colors duration-300"
-              style={{ color: isCompleted ? 'var(--t-text-faint)' : 'var(--t-text)' }}
-            >
+          <span
+            className="text-[15px] leading-snug transition-colors duration-300 py-1"
+            style={{ color: isCompleted ? 'var(--t-text-faint)' : 'var(--t-text)' }}
+          >
+            <span className={isCompleted ? `strike ${justCompleted ? 'strike-animate' : ''}` : ''}>
               {task.title}
             </span>
-            {isCompleted && (
-              <span
-                className="absolute left-0 right-0 top-1/2 h-[1.5px] origin-left"
-                style={{
-                  backgroundColor: 'var(--t-text-faint)',
-                  ...(justCompleted ? { animation: 'strikethrough 300ms ease-out 100ms both' } : {}),
-                }}
-              />
-            )}
           </span>
         )}
       </div>
 
-      {/* Action buttons: edit, help, delete */}
+      {/* Action buttons: edit, help, delete — float over the title end on hover */}
       {!isEditing && (
-        <div className="shrink-0 flex items-center gap-1
-          opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200
-          task-action-touch">
-          {/* Edit button */}
+        <div className="task-actions task-action-touch">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
               onStartEdit(task.id)
             }}
-            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors duration-150"
-            style={{ color: 'var(--t-text-light)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--t-border-light)'
-              e.currentTarget.style.color = 'var(--t-text)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-              e.currentTarget.style.color = 'var(--t-text-light)'
-            }}
+            className="icon-btn !w-8 !h-8"
             title="Edit task"
             aria-label="Edit task"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-              <path d="m15 5 4 4" />
-            </svg>
+            <PencilIcon size={15} />
           </button>
 
-          {/* Help button */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
               onHelp(task)
             }}
-            className="inline-flex items-center gap-1 text-xs rounded-lg px-2.5 py-1.5
-              transition-colors duration-150"
-            style={{
-              color: 'var(--t-text-light)',
-              backgroundColor: 'var(--t-border-light)',
-            }}
+            className="btn btn-soft text-xs h-8 w-8 sm:w-auto sm:px-2.5 !rounded-full !gap-1.5"
+            title="Get an AI prompt to help with this task"
+            aria-label="Help"
           >
-            <span className="text-sm">{'\u{1FA84}'}</span> Help
+            <WandIcon size={14} />
+            <span className="hidden sm:inline" aria-hidden="true">Help</span>
           </button>
 
-          {/* Delete button */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
               onDelete(task.id)
             }}
-            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors duration-150"
-            style={{ color: 'var(--t-text-faint)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--t-red-bg)'
-              e.currentTarget.style.color = 'var(--t-red)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-              e.currentTarget.style.color = 'var(--t-text-faint)'
-            }}
+            className="icon-btn icon-btn-danger !w-8 !h-8"
             title="Delete task"
             aria-label="Delete task"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <TrashIcon size={15} />
           </button>
         </div>
       )}
