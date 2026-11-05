@@ -140,6 +140,7 @@ src-tauri/
 - `App.tsx` re-checks the key when `SettingsModal` closes so the first-run notice disappears as soon as a key is saved.
 - 401/403 responses surface `INVALID_API_KEY_MESSAGE` (points at Settings) in both brain dump parsing and Help Me prompts.
 - Model URL lives in `src/lib/geminiConfig.ts`. Update there if Gemini deprecates the current model (history: `gemini-2.0-flash` → `gemini-2.5-flash` after 2.0 hit `RESOURCE_EXHAUSTED` 429s on free tier)
+- All Gemini calls go through `requestGemini()` in `geminiConfig.ts`, which retries 5xx overloads ("model is overloaded" 503s are common on the free tier) and maps 401/403, 429, and 5xx to friendly messages. Never show the raw response body to the user.
 - Never commit a real key anywhere in the repo, including docs and tests.
 - Voice-to-text does **not** use Gemini. It uses the Web Speech API via `useSpeechRecognition`; Gemini is used for brain dump parsing and Help Me prompt generation.
 
@@ -155,6 +156,7 @@ src-tauri/
 ### Voice Input Behavior
 - `LandingScreen` supports voice dictation for the initial brain dump; dictation appends after any already typed text.
 - `SprintView` also supports voice dictation when adding a single task via `+ Add task`; the mic button appends dictation after any already typed text and stops/reset recording on submit or close.
+- macOS only allows mic and speech recognition access because `src-tauri/Info.plist` declares `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription`. Without them the webview gets `not-allowed` with no prompt. After editing the plist, touch `src-tauri/build.rs` so Cargo re-embeds it in dev builds.
 
 ## Build & Dev Commands
 

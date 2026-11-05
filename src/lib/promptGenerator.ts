@@ -1,5 +1,5 @@
 import type { Task } from '../types';
-import { GEMINI_API_URL, INVALID_API_KEY_MESSAGE, geminiHeaders, getApiKey } from './geminiConfig';
+import { GeminiRequestError, MissingApiKeyError, requestGemini } from './geminiConfig';
 import type { GeminiResponse } from './geminiConfig';
 
 const META_PROMPT = `You are a helpful AI prompt engineer. Given a task from an ADHD-friendly sprint planner, generate a ready-to-use prompt that the user can paste into any AI assistant (like Claude, ChatGPT, etc.) to get help completing the task.
@@ -45,9 +45,6 @@ const FALLBACK_PROMPT = (title: string) =>
   `Help me with this task: "${title}". Break it down into clear, manageable steps and guide me through completing it. If you need more context, ask me specific questions first.`;
 
 export async function generateHelpPrompt(task: Task): Promise<string> {
-  // Throws MissingApiKeyError when no key is saved; the modal shows that message.
-  const apiKey = await getApiKey();
-
   const tagsContext = task.tags.length > 0
     ? ` (tags: ${task.tags.join(', ')})`
     : '';
@@ -71,36 +68,16 @@ export async function generateHelpPrompt(task: Task): Promise<string> {
     },
   };
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
-
-  let response: Response;
+  let data: GeminiResponse;
   try {
-    response = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: geminiHeaders(apiKey),
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+    data = await requestGemini(body, 15_000);
   } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      return FALLBACK_PROMPT(task.title);
-    }
-    return FALLBACK_PROMPT(task.title);
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  if (!response.ok) {
-    // A rejected key is something the user can fix, so surface it instead of
-    // silently falling back to the generic prompt.
-    if (response.status === 401 || response.status === 403) {
-      throw new Error(INVALID_API_KEY_MESSAGE);
-    }
+    // A missing or rejected key is something the user can fix, so surface it
+    // instead of silently falling back to the generic prompt.
+    if (err instanceof MissingApiKeyError) throw err;
+    if (err instanceof GeminiRequestError && err.kind === 'invalid-key') throw err;
     return FALLBACK_PROMPT(task.title);
   }
-
-  const data: GeminiResponse = await response.json();
 
   if (data.error) {
     return FALLBACK_PROMPT(task.title);

@@ -1,6 +1,5 @@
 import type { Task } from '../types';
-import { GEMINI_API_URL, INVALID_API_KEY_MESSAGE, geminiHeaders, getApiKey } from './geminiConfig';
-import type { GeminiResponse } from './geminiConfig';
+import { requestGemini } from './geminiConfig';
 
 const SYSTEM_PROMPT = `You are a helpful task parser for an ADHD-friendly sprint planner app. Your job is to take messy, stream-of-consciousness brain dumps and extract clear, actionable tasks.
 
@@ -81,8 +80,6 @@ function parseGeminiResponse(responseText: string): GeminiTaskResult[] {
 }
 
 export async function parseBrainDump(text: string): Promise<Omit<Task, 'id' | 'sprint_id' | 'position'>[]> {
-  const apiKey = await getApiKey();
-
   const body = {
     system_instruction: {
       parts: [{ text: SYSTEM_PROMPT }],
@@ -102,39 +99,8 @@ export async function parseBrainDump(text: string): Promise<Omit<Task, 'id' | 's
     },
   };
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
-
-  let response: Response;
-  try {
-    response = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: geminiHeaders(apiKey),
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error("That took too long. Let's try again.");
-    }
-    throw new Error("Couldn't connect to AI. Check your internet and try again.");
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => '');
-
-    if (response.status === 429) {
-      throw new Error('Slow down! Take a breath and try again in a minute.');
-    }
-    if (response.status === 401 || response.status === 403) {
-      throw new Error(INVALID_API_KEY_MESSAGE);
-    }
-    throw new Error(`Something went wrong with the AI (${response.status}). ${errorBody.slice(0, 100)}`);
-  }
-
-  const data: GeminiResponse = await response.json();
+  // Retries transient overloads; throws errors with user-facing messages.
+  const data = await requestGemini(body, 30_000);
 
   if (data.error) {
     throw new Error(`Gemini error: ${data.error.message || 'Unknown error'}`);
