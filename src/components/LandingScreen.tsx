@@ -222,7 +222,8 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
               </p>
               <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--t-text-light)' }}>
                 Turning brain dumps into tasks uses Google Gemini, which needs a free API key.
-                It takes about a minute and stays on this device.
+                Your key stays on this device. For free-tier setup steps, open Settings
+                and choose “Use Gemini’s free tier” below the key field.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
                 {onOpenSettings && (

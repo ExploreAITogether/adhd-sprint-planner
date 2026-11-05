@@ -6,6 +6,10 @@ export const GEMINI_API_URL =
 /** Where users create a free Gemini API key. Linked from Settings and the first-run notice. */
 export const GEMINI_KEY_URL = 'https://aistudio.google.com/apikey';
 
+/** Setup guide links; each URL is explicitly allowed in the Tauri opener scope. */
+export const GOOGLE_BILLING_URL = 'https://console.cloud.google.com/billing';
+export const GOOGLE_BILLING_HELP_URL = 'https://docs.cloud.google.com/billing/docs/how-to/modify-project';
+
 export const MISSING_API_KEY_MESSAGE =
   'Add your free Gemini API key in Settings to turn brain dumps into tasks.';
 

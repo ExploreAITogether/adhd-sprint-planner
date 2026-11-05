@@ -145,7 +145,7 @@ src-tauri/
 
 ### Tauri Security
 - `tauri-plugin-shell` is intentionally not registered; do not add shell permissions unless a feature truly needs external URL/process opening.
-- `tauri-plugin-opener` is registered only so the "get a Gemini API key" links can open the system browser. Its `opener:allow-open-url` scope in `default.json` allows exactly `https://aistudio.google.com/apikey`; widen it only if a feature truly needs another URL. The plugin's init script routes `<a target="_blank">` clicks through that same scope, so other external links stay blocked.
+- `tauri-plugin-opener` lets API key setup and free-tier guide links open the system browser. Its `opener:allow-open-url` scope in `default.json` allows exactly `https://aistudio.google.com/apikey`, `https://console.cloud.google.com/billing`, and `https://docs.cloud.google.com/billing/docs/how-to/modify-project`; widen it only if a feature truly needs another URL. The plugin's init script routes `<a target="_blank">` clicks through that same scope, so other external links stay blocked.
 - `default.json` limits markdown export writes to `$DOWNLOAD/**`, `$DOCUMENT/**`, and `$DESKTOP/**`. Avoid re-adding broad `$HOME/**` filesystem scope.
 - `tauri.conf.json` defines a CSP. Keep script sources tight; inline styles are currently allowed because the React UI uses many inline CSS custom-property styles.
 

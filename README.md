@@ -67,7 +67,29 @@ npm run tauri dev
 The app does not ship with an API key. On first launch you'll see a notice
 above the brain dump box; click **Add key in Settings** (or the gear icon),
 paste a key from [Google AI Studio](https://aistudio.google.com/apikey), and
-press **Save**. The free tier is plenty for personal use.
+press **Save**. Settings also includes a **Use Gemini’s free tier** guide below
+the key field.
+
+For a new key, create a project in Google AI Studio and leave its billing tier
+on **Free**. Setting up billing or buying prepaid credits isn't required for
+free-tier access. Model availability, region eligibility, and usage limits apply.
+
+If your key's project already uses Tier 1 or another paid tier:
+
+1. In AI Studio, identify the project linked to your key.
+2. Open [Google Cloud Billing](https://console.cloud.google.com/billing) and
+   select that project's billing account.
+3. Scroll down the left sidebar to **Billing management → Account management**.
+4. Under **Projects linked to this billing account**, find your project and
+   click the **three dots (⋮) in its Actions column**.
+5. Choose **Disable billing** and confirm for that project.
+
+This returns Gemini API access to the free tier. Other paid services in the
+project will stop, some cloud resources may be deleted, and existing charges
+still apply. Check for other services before confirming. If the project already
+shows **Free**, no change is needed. After switching, try making tasks in the app.
+See [Google's billing instructions](https://docs.cloud.google.com/billing/docs/how-to/modify-project)
+for details.
 
 The key is stored in the app's local SQLite database on your machine and is
 sent only to Google's Gemini API, in a request header, when you parse a brain

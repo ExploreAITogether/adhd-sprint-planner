@@ -3,7 +3,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { useTheme } from '../hooks/useTheme'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { getSettings, updateSettings } from '../lib/database'
-import { GEMINI_KEY_URL } from '../lib/geminiConfig'
+import { GEMINI_KEY_URL, GOOGLE_BILLING_URL, GOOGLE_BILLING_HELP_URL } from '../lib/geminiConfig'
 import type { Settings } from '../types'
 import ModalShell from './ModalShell'
 import { CheckIcon, EyeIcon, EyeOffIcon, MonitorIcon, MoonIcon, SunIcon } from './icons'
@@ -22,6 +22,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   // The key as last persisted, so the Save button only lights up on real changes.
   const [savedApiKey, setSavedApiKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
+  const [showFreeTierGuide, setShowFreeTierGuide] = useState(false)
   const [apiKeyError, setApiKeyError] = useState<string | null>(null)
   const [savedField, setSavedField] = useState<string | null>(null)
   const [isClosing, setIsClosing] = useState(false)
@@ -152,7 +153,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       labelledBy="settings-title"
       widthClass="max-w-[440px]"
     >
-      <div className="px-7 pt-7 pb-6">
+      <div className="px-7 pt-7 pb-6 max-h-[calc(100dvh-40px)] overflow-y-auto">
         <h2 id="settings-title" className="font-display text-[22px] font-medium mb-6">
           Settings
         </h2>
@@ -226,6 +227,58 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             >
               Get a free key from Google AI Studio
             </a>
+            <div className="surface rounded-xl px-3 py-1 mt-1">
+              <button
+                type="button"
+                onClick={() => setShowFreeTierGuide((shown) => !shown)}
+                aria-expanded={showFreeTierGuide}
+                aria-controls="free-tier-guide"
+                className="w-full min-h-[44px] text-left text-xs font-medium underline underline-offset-2"
+                style={{ color: 'var(--t-accent)' }}
+              >
+                {showFreeTierGuide ? 'Hide free-tier guide' : 'Use Gemini’s free tier'}
+              </button>
+              {showFreeTierGuide && (
+                <div id="free-tier-guide" className="pb-3 text-xs leading-relaxed" style={{ color: 'var(--t-text-light)' }}>
+                  <p>
+                    In Google AI Studio, create a key in a new project and keep its billing tier
+                    on <strong>Free</strong>. You don’t need to set up billing or buy prepaid credits
+                    to use the free tier. Paste the key above and press <strong>Save</strong>.
+                  </p>
+                  <p className="font-medium mt-3">Already on Tier 1 or another paid tier?</p>
+                  <ol className="list-decimal pl-4 mt-1 space-y-2">
+                    <li>In AI Studio, note the project linked to your API key.</li>
+                    <li>
+                      Open{' '}
+                      <a href={GOOGLE_BILLING_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2" style={{ color: 'var(--t-accent)' }}>
+                        Google Cloud Billing
+                      </a>
+                      {' '}and select that project’s billing account.
+                    </li>
+                    <li>
+                      In the left sidebar, scroll to <strong>Billing management → Account management</strong>.
+                      Under <strong>Projects linked to this billing account</strong>, find your project.
+                    </li>
+                    <li>
+                      Click the <strong>three dots (⋮) in that project’s Actions column</strong>,
+                      choose <strong>Disable billing</strong>, then confirm for that project.
+                    </li>
+                  </ol>
+                  <p className="mt-3">
+                    Disabling billing returns Gemini API access to the free tier. Other paid
+                    services in that project will stop, some cloud resources may be deleted,
+                    and existing charges still apply. Check what else uses the project before confirming.
+                  </p>
+                  <p className="mt-2">
+                    If your project already shows Free, you’re all set. Free access has model,
+                    region, and usage limits. After switching, try making tasks in the app.
+                  </p>
+                  <a href={GOOGLE_BILLING_HELP_URL} target="_blank" rel="noreferrer" className="inline-flex items-center min-h-[44px] mt-1 underline underline-offset-2" style={{ color: 'var(--t-accent)' }}>
+                    Google’s billing instructions
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="divider" />
