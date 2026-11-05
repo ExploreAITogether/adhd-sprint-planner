@@ -30,16 +30,10 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div
-          className="min-h-full flex items-center justify-center p-6"
-          style={{ background: 'linear-gradient(to bottom right, var(--t-bg-start), var(--t-bg-end))' }}
-        >
-          <div
-            className="rounded-3xl px-10 py-10 max-w-md w-full text-center"
-            style={{ backgroundColor: 'var(--t-card)', boxShadow: 'var(--t-shadow-card)' }}
-          >
-            <p className="text-3xl mb-4">:(</p>
-            <h2 className="text-lg font-medium mb-2" style={{ color: 'var(--t-text)' }}>
+        <div className="app-bg flex items-center justify-center p-6">
+          <div className="glass-card px-10 py-10 max-w-md w-full text-center">
+            <p className="text-4xl mb-4" aria-hidden="true">{'\u{1F327}\u{FE0F}'}</p>
+            <h2 className="font-display text-[22px] font-medium mb-2">
               Something went wrong
             </h2>
             <p className="text-sm mb-6" style={{ color: 'var(--t-text-light)' }}>
@@ -54,21 +48,10 @@ export default class ErrorBoundary extends Component<Props, State> {
               </p>
             )}
             <div className="flex flex-col gap-2">
-              <button
-                onClick={this.handleRestart}
-                className="rounded-xl py-3 px-8 text-sm font-medium text-white transition-all duration-200 active:scale-[0.98]"
-                style={{
-                  background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
-                  boxShadow: `0 2px 12px var(--t-accent-shadow)`,
-                }}
-              >
+              <button onClick={this.handleRestart} className="btn btn-primary h-11 px-8 text-sm">
                 Try again
               </button>
-              <button
-                onClick={() => window.location.reload()}
-                className="rounded-xl py-2.5 px-8 text-xs font-medium transition-all duration-200 active:scale-[0.98]"
-                style={{ color: 'var(--t-text-light)' }}
-              >
+              <button onClick={() => window.location.reload()} className="btn btn-ghost h-10 px-8 text-xs">
                 Reload app
               </button>
             </div>

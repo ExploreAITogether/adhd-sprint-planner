@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { initDatabase, createSprintWithTasks, getActiveSprint, getSprintById, getWeekDays, setDayTheme, clearDayTheme } from './lib/database'
 import { parseBrainDump } from './lib/gemini'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -8,37 +8,13 @@ import HistoryView from './components/HistoryView'
 import SettingsModal from './components/SettingsModal'
 import ThemeEditorModal from './components/ThemeEditorModal'
 import ErrorBoundary from './components/ErrorBoundary'
+import Toast from './components/Toast'
 import type { Sprint, Task, WeekDay } from './types'
 import './App.css'
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 type AppView = 'landing' | 'sprint' | 'history'
-
-function AppToast({ message, onDone }: { message: string; onDone: () => void }) {
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  useEffect(() => {
-    timerRef.current = setTimeout(onDone, 4000)
-    return () => clearTimeout(timerRef.current)
-  }, [onDone])
-
-  return (
-    <div
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
-        rounded-2xl px-5 py-3 text-sm font-medium"
-      style={{
-        backgroundColor: 'var(--t-toast-bg)',
-        border: '1px solid var(--t-toast-border)',
-        boxShadow: 'var(--t-toast-shadow)',
-        color: 'var(--t-red, #e53e3e)',
-        animation: 'slide-up-fade 300ms ease-out',
-      }}
-    >
-      {message}
-    </div>
-  )
-}
 
 function AppContent() {
   const [dbReady, setDbReady] = useState(false)
@@ -52,6 +28,10 @@ function AppContent() {
   const [themeEditorOpen, setThemeEditorOpen] = useState(false)
   const [selectedDayForEdit, setSelectedDayForEdit] = useState<number | null>(null)
   const [appToast, setAppToast] = useState<string | null>(null)
+  // Brain-dump draft lives here so it survives a detour to History
+  const [landingDraft, setLandingDraft] = useState('')
+
+  const clearAppToast = useCallback(() => setAppToast(null), [])
 
   const refreshWeekDays = useCallback(async () => {
     try {
@@ -104,6 +84,7 @@ function AppContent() {
 
       // 3. Update local state and switch view
       setActiveSprint(fullSprint)
+      setLandingDraft('')
       setView('sprint')
     } catch (err) {
       console.error('Failed to process brain dump:', err)
@@ -244,12 +225,10 @@ function AppContent() {
 
   if (dbError) {
     return (
-      <div className="min-h-full flex items-center justify-center p-6"
-        style={{ background: 'linear-gradient(to bottom right, var(--t-bg-start), var(--t-bg-end))' }}>
-        <div className="rounded-3xl px-10 py-10 max-w-md text-center"
-          style={{ backgroundColor: 'var(--t-card)', boxShadow: 'var(--t-shadow-card)' }}>
-          <p className="text-sm" style={{ color: 'var(--t-red)' }}>Something went wrong initializing the database.</p>
-          <p className="text-xs mt-2" style={{ color: 'var(--t-text-light)' }}>{dbError}</p>
+      <div className="app-bg flex items-center justify-center p-6">
+        <div className="glass-card px-10 py-10 max-w-md text-center">
+          <p className="text-sm font-medium" style={{ color: 'var(--t-red-text)' }}>Something went wrong initializing the database.</p>
+          <p className="text-xs mt-2 break-words" style={{ color: 'var(--t-text-light)' }}>{dbError}</p>
         </div>
       </div>
     )
@@ -257,11 +236,14 @@ function AppContent() {
 
   if (!dbReady) {
     return (
-      <div className="min-h-full flex items-center justify-center"
-        style={{ background: 'linear-gradient(to bottom right, var(--t-bg-start), var(--t-bg-end))' }}>
-        <div className="text-sm animate-pulse" style={{ color: 'var(--t-text-light)' }}>
-          Loading...
-        </div>
+      <div className="app-bg flex items-center justify-center" role="status" aria-label="Loading">
+        <span
+          className="w-3 h-3 rounded-full"
+          style={{
+            backgroundImage: 'linear-gradient(135deg, var(--t-accent), var(--t-accent-end))',
+            animation: 'breathe 1.6s ease-in-out infinite',
+          }}
+        />
       </div>
     )
   }
@@ -292,6 +274,9 @@ function AppContent() {
           error={error}
           onDismissError={() => setError(null)}
           onOpenSettings={() => setShowSettings(true)}
+          onViewHistory={handleViewHistory}
+          initialInput={landingDraft}
+          onInputChange={setLandingDraft}
           weekDays={weekDays}
           onDayClick={handleDayClick}
           todayTheme={todayTheme}
@@ -310,7 +295,7 @@ function AppContent() {
         onClose={handleThemeEditorClose}
       />
 
-      {appToast && <AppToast message={appToast} onDone={() => setAppToast(null)} />}
+      {appToast && <Toast tone="error" message={appToast} onDone={clearAppToast} />}
     </>
   )
 }
