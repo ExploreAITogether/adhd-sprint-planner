@@ -2,6 +2,24 @@
 
 A calming desktop app that takes messy brain dumps and turns them into clear, manageable task sprints. Built with a Headspace/Calm aesthetic specifically for ADHD brains.
 
+## Download
+
+Free for macOS and Windows. Get the latest installer from the [Releases page](https://github.com/ExploreAITogether/adhd-sprint-planner/releases/latest).
+
+**Mac** (10.15 or newer, Apple Silicon and Intel): download the `.dmg`.
+
+1. Open the `.dmg` and drag the app to Applications.
+2. Double-click the app. macOS will warn that it can't verify the app and won't open it, because the app isn't notarized by Apple. Click **Done**.
+3. Open **System Settings → Privacy & Security**, scroll down, click **Open Anyway**, and confirm.
+
+You repeat steps 2 and 3 for each new version you install.
+
+**Windows** (10 or 11, 64-bit): download the `-setup.exe` and run it. If a blue SmartScreen box appears, click **More info**, then **Run anyway**.
+
+**Then add your free Gemini key:** the AI features use your own key, which stays on your computer. Create one at [Google AI Studio](https://aistudio.google.com/apikey) and paste it into **Settings → Gemini API key** in the app.
+
+To update, download the newest installer and install over the top. Your data and settings stay put.
+
 ## How It Works
 
 1. **Dump your thoughts** -- Type or speak whatever is on your mind
@@ -111,24 +129,19 @@ own Gemini key in Settings after installing.
 
 ```bash
 # Option A: push a version tag
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.2.0
+git push origin v1.2.0
 
 # Option B: trigger manually
 gh workflow run release.yml
 ```
 
-Then publish the draft release from the GitHub Releases page and download the
-installers:
-
-- **macOS**: open the `.dmg`, drag the app to Applications. The build is
-  unsigned, so the first launch needs right-click → Open (or
-  `xattr -cr "/Applications/ADHD Sprint Planner.app"`).
-- **Windows**: run the `.exe` (NSIS) installer. If SmartScreen appears,
-  click "More info" → "Run anyway".
+Then test the draft's installers (see [Download](#download) for the install
+steps) and publish it from the GitHub Releases page.
 
 > Bumping the version: update `version` in `package.json`,
 > `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, then tag to match.
+> The Settings footer reads the version at runtime.
 
 ### Local build — macOS
 
@@ -151,12 +164,12 @@ Outputs:
 - `.msi` installer in `src-tauri/target/release/bundle/msi/`
 - NSIS installer in `src-tauri/target/release/bundle/nsis/`
 
-### Code Signing (Optional)
+### Code Signing
 
-For distribution outside personal use:
+Releases are not signed with a paid certificate, which is why the install steps above include a warning.
 
-- **macOS**: Requires an Apple Developer account ($99/year) for notarization. Set `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID` environment variables. See [Tauri macOS signing docs](https://tauri.app/distribute/sign/macos/).
-- **Windows**: Requires a code signing certificate. Set the `TAURI_SIGNING_PRIVATE_KEY` environment variable. See [Tauri Windows signing docs](https://tauri.app/distribute/sign/windows/).
+- **macOS**: Builds are ad-hoc signed (`bundle.macOS.signingIdentity: "-"` in `tauri.conf.json`). Without that, macOS reports a downloaded copy as damaged and offers no Open Anyway. Removing the warning needs an Apple Developer account ($99/year) for Developer ID signing and notarization: replace the `-` identity and add `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID` as secrets passed to the release workflow. See the [Tauri macOS signing docs](https://v2.tauri.app/distribute/sign/macos/).
+- **Windows**: SmartScreen warns about unsigned installers. Removing the warning needs a code signing certificate. See the [Tauri Windows signing docs](https://v2.tauri.app/distribute/sign/windows/).
 
 ## Project Structure
 

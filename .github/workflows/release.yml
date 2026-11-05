@@ -2,7 +2,10 @@ name: Release
 
 # Builds installers for macOS and Windows and attaches them to a draft
 # GitHub Release. Trigger it manually from the Actions tab, or by pushing
-# a version tag (e.g. `git tag v1.1.0 && git push origin v1.1.0`).
+# a version tag (e.g. `git tag v1.2.0 && git push origin v1.2.0`).
+#
+# macOS builds are ad-hoc signed (bundle.macOS.signingIdentity in
+# tauri.conf.json), not notarized, so no Apple secrets are needed here.
 on:
   workflow_dispatch:
   push:
@@ -55,12 +58,19 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'ADHD Sprint Planner v__VERSION__'
-          releaseBody: >
-            Download the installer for your platform below.
-            macOS: open the .dmg and drag the app to Applications
-            (unsigned build — right-click the app and choose Open the
-            first time). Windows: run the .exe installer (click
-            "More info" → "Run anyway" if SmartScreen appears).
+          releaseBody: |
+            Free and open source. Download the file for your computer from **Assets** below.
+
+            **Mac** (Apple Silicon and Intel): download the `.dmg`.
+            1. Open the `.dmg` and drag the app to Applications.
+            2. Double-click the app. macOS will warn that it can't verify the app and won't open it, because the app isn't notarized by Apple. Click **Done**.
+            3. Open **System Settings → Privacy & Security**, scroll down, click **Open Anyway**, and confirm.
+
+            You repeat steps 2 and 3 for each new version you install.
+
+            **Windows** (10 or 11, 64-bit): download the `-setup.exe` and run it. If a blue SmartScreen box appears, click **More info**, then **Run anyway**.
+
+            **Then add your free Gemini key:** the AI features use your own key, which stays on your computer. Create one at https://aistudio.google.com/apikey and paste it into **Settings → Gemini API key** in the app.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
