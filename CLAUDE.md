@@ -165,6 +165,7 @@ src-tauri/
 - `LandingScreen` supports voice dictation for the initial brain dump; dictation appends after any already typed text.
 - `SprintView` also supports voice dictation when adding a single task via `+ Add task`; the mic button appends dictation after any already typed text and stops/reset recording on submit or close.
 - macOS only allows mic and speech recognition access because `src-tauri/Info.plist` declares `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription`. Without them the webview gets `not-allowed` with no prompt. After editing the plist, touch `src-tauri/build.rs` so Cargo re-embeds it in dev builds.
+- Bundled macOS builds are ad-hoc signed (`bundle.macOS.signingIdentity: "-"`), because a downloaded app without a full bundle signature is reported as damaged with no Open Anyway. Tauri still applies the hardened runtime to ad-hoc builds, so `src-tauri/Entitlements.plist` must keep `com.apple.security.device.audio-input` or the mic is blocked. `tauri dev` is not signed this way, so test voice input in a bundled build after touching either setting.
 
 ## Build & Dev Commands
 

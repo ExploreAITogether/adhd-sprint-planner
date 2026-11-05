@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { getVersion } from '@tauri-apps/api/app'
 import { useTheme } from '../hooks/useTheme'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { getSettings, updateSettings } from '../lib/database'
@@ -24,6 +25,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   const [apiKeyError, setApiKeyError] = useState<string | null>(null)
   const [savedField, setSavedField] = useState<string | null>(null)
   const [isClosing, setIsClosing] = useState(false)
+  const [appVersion, setAppVersion] = useState<string | null>(null)
   const modalRef = useRef<HTMLDivElement>(null)
   const savedTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -36,6 +38,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
         setSavedApiKey(s.api_key ?? '')
       })
       .catch(() => {})
+    getVersion().then(setAppVersion).catch(() => {})
   }, [])
 
   // Cleanup timer
@@ -370,7 +373,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
 
         {/* Footer: app info */}
         <p className="mt-7 pt-5 text-center text-xs" style={{ color: 'var(--t-text-faint)', borderTop: '1px solid var(--t-border-light)' }}>
-          ADHD Sprint Planner v1.1
+          ADHD Sprint Planner{appVersion && ` v${appVersion}`}
         </p>
       </div>
     </ModalShell>
