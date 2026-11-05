@@ -34,9 +34,10 @@ src/
 │   └── sounds.ts            # Web Audio API sound effects
 ├── hooks/
 │   ├── useSpeechRecognition.ts  # Web Speech API hook for voice input
-│   └── useFocusTrap.ts          # Keeps Tab focus inside open modals
+│   ├── useFocusTrap.ts          # Keeps Tab focus inside open modals
+│   └── useTheme.ts              # Theme context object + useTheme() hook
 ├── contexts/
-│   └── ThemeContext.tsx      # Light/dark/system theme provider
+│   └── ThemeContext.tsx      # Light/dark/system theme provider (component only)
 └── types/
     └── index.ts             # All TypeScript interfaces
 
@@ -124,7 +125,7 @@ src-tauri/
 - Tailwind CSS v4 with `@theme` block in `index.css` defining custom colors
 - Dual theme system: `--t-*` CSS custom properties for light/dark mode
 - Dark mode applied by toggling `.theme-dark` class on `<html>`
-- `ThemeContext` provides resolved theme + toggle via React context
+- `ThemeProvider` (contexts/ThemeContext.tsx) provides resolved theme + toggle; consumers call `useTheme()` from `hooks/useTheme.ts`
 
 ### Component Patterns
 - No external state management (no Redux/Zustand) — `useState` + callback props

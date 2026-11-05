@@ -158,9 +158,9 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
   const [toast, setToast] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const loadHistory = useCallback(() => {
-    setLoading(true)
-    setLoadError(null)
+  // Fetch the first page. State updates happen only in promise callbacks, so
+  // this is safe to call directly from the mount effect.
+  const fetchHistory = useCallback(() => {
     getSprintHistory(PAGE_SIZE, 0)
       .then(({ sprints: history, hasMore: more }) => {
         setSprints(history)
@@ -172,6 +172,13 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
       })
       .finally(() => setLoading(false))
   }, [])
+
+  // Retry path: reset to the loading state first, then fetch.
+  const loadHistory = useCallback(() => {
+    setLoading(true)
+    setLoadError(null)
+    fetchHistory()
+  }, [fetchHistory])
 
   const loadMore = useCallback(() => {
     setLoadingMore(true)
@@ -188,8 +195,8 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
   }, [sprints.length])
 
   useEffect(() => {
-    loadHistory()
-  }, [loadHistory])
+    fetchHistory()
+  }, [fetchHistory])
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300)

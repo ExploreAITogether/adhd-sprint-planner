@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
-import { useTheme } from '../contexts/ThemeContext'
+import { useTheme } from '../hooks/useTheme'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { getSettings, updateSettings } from '../lib/database'
 import { GEMINI_KEY_URL } from '../lib/geminiConfig'

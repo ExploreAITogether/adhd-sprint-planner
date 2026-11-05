@@ -48,15 +48,11 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
   const [input, setInput] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [voiceError, setVoiceError] = useState<string | null>(null)
-  const [isMac, setIsMac] = useState(false)
+  // OS detection for the keyboard shortcut hint; never changes after mount.
+  const [isMac] = useState(() => navigator.userAgent.indexOf('Mac') !== -1)
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
   // Text already in the textarea when recording starts; dictation appends to it.
   const voiceBaseRef = useRef('')
-
-  // Detect OS for keyboard shortcut hint
-  useEffect(() => {
-    setIsMac(navigator.userAgent.indexOf('Mac') !== -1)
-  }, [])
 
   const {
     isSupported: voiceSupported,
@@ -98,12 +94,16 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
     return () => clearInterval(interval)
   }, [isLoading])
 
-  // Show speech errors as voice error messages
-  useEffect(() => {
+  // Show speech errors as voice error messages. Adjusting state during render
+  // (keyed on the previous hook value) avoids an extra effect-driven render and
+  // still lets the user dismiss the message independently of the hook's error.
+  const [lastSpeechError, setLastSpeechError] = useState(speechError)
+  if (speechError !== lastSpeechError) {
+    setLastSpeechError(speechError)
     if (speechError && speechError !== 'not-supported') {
       setVoiceError(voiceErrorMessage(speechError))
     }
-  }, [speechError])
+  }
 
   const handleSubmit = () => {
     const trimmed = input.trim()
