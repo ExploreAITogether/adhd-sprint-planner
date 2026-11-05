@@ -15,31 +15,36 @@ interface ThemeEditorModalProps {
   onClose: () => void
 }
 
-export default function ThemeEditorModal({
-  isOpen,
-  dayOfWeek,
+/**
+ * Gate: renders nothing while closed. The content component below mounts
+ * fresh on every open (keyed by day), so its form state starts from the
+ * current theme without needing a reset effect.
+ */
+export default function ThemeEditorModal({ isOpen, dayOfWeek, ...rest }: ThemeEditorModalProps) {
+  if (!isOpen) return null
+  return <ThemeEditorModalContent key={dayOfWeek} dayOfWeek={dayOfWeek} {...rest} />
+}
+
+type ThemeEditorModalContentProps = Omit<ThemeEditorModalProps, 'isOpen'>
+
+function ThemeEditorModalContent({
   dayName,
   currentTheme,
   onSave,
   onClear,
   onClose,
-}: ThemeEditorModalProps) {
-  const [emoji, setEmoji] = useState('')
-  const [name, setName] = useState('')
+}: ThemeEditorModalContentProps) {
+  const [emoji, setEmoji] = useState(currentTheme?.emoji ?? '')
+  const [name, setName] = useState(currentTheme?.name ?? '')
   const [isClosing, setIsClosing] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
   const emojiRef = useRef<HTMLInputElement>(null)
 
-  // Reset form when modal opens with new day
+  // Focus emoji input after the open animation
   useEffect(() => {
-    if (isOpen) {
-      setEmoji(currentTheme?.emoji ?? '')
-      setName(currentTheme?.name ?? '')
-      setIsClosing(false)
-      // Focus emoji input after animation
-      setTimeout(() => emojiRef.current?.focus(), 200)
-    }
-  }, [isOpen, dayOfWeek, currentTheme])
+    const timer = setTimeout(() => emojiRef.current?.focus(), 200)
+    return () => clearTimeout(timer)
+  }, [])
 
   const handleClose = useCallback(() => {
     setIsClosing(true)
@@ -59,8 +64,6 @@ export default function ThemeEditorModal({
 
   // Keyboard shortcuts
   useEffect(() => {
-    if (!isOpen) return
-
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         handleClose()
@@ -69,11 +72,9 @@ export default function ThemeEditorModal({
 
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [isOpen, handleClose])
+  }, [handleClose])
 
-  useFocusTrap(modalRef, isOpen && !isClosing)
-
-  if (!isOpen) return null
+  useFocusTrap(modalRef, !isClosing)
 
   return (
     <ModalShell

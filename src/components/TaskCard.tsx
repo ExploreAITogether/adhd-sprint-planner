@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react'
+import { useEffect, useRef, memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { Task } from '../types'
@@ -30,7 +30,6 @@ const TaskCard = memo(function TaskCard({
   isDeleting,
 }: TaskCardProps) {
   const isCompleted = task.status === 'completed'
-  const [editValue, setEditValue] = useState(task.title)
   const editRef = useRef<HTMLInputElement>(null)
 
   const {
@@ -47,18 +46,18 @@ const TaskCard = memo(function TaskCard({
     transition,
   }
 
+  // Focus + select the edit input once it has mounted.
   useEffect(() => {
-    if (isEditing) {
-      setEditValue(task.title)
-      setTimeout(() => {
-        editRef.current?.focus()
-        editRef.current?.select()
-      }, 0)
-    }
-  }, [isEditing, task.title])
+    if (!isEditing) return
+    const timer = setTimeout(() => {
+      editRef.current?.focus()
+      editRef.current?.select()
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [isEditing])
 
   const handleEditSave = () => {
-    const trimmed = editValue.trim()
+    const trimmed = editRef.current?.value.trim() ?? ''
     if (trimmed && trimmed !== task.title) {
       onEdit(task.id, trimmed)
     }
@@ -71,7 +70,6 @@ const TaskCard = memo(function TaskCard({
       handleEditSave()
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      setEditValue(task.title)
       onCancelEdit()
     }
   }
@@ -166,8 +164,7 @@ const TaskCard = memo(function TaskCard({
         {isEditing ? (
           <input
             ref={editRef}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
+            defaultValue={task.title}
             onBlur={handleEditSave}
             onKeyDown={handleEditKeyDown}
             aria-label="Task title"

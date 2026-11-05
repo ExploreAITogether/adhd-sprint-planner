@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useSpeechRecognition, type SpeechError } from '../hooks/useSpeechRecognition'
 import type { WeekDay, DayTheme } from '../types'
+import { GEMINI_KEY_URL } from '../lib/geminiConfig'
 import WeeklyStrip from './WeeklyStrip'
 import TodayThemeChip from './TodayThemeChip'
 import { HistoryIcon, MicIcon, SettingsIcon, SparklesIcon, Spinner, StopIcon, CloseIcon, AlertIcon } from './icons'
@@ -15,6 +16,8 @@ interface LandingScreenProps {
   /** Draft text to restore when returning to this screen (e.g. from History). */
   initialInput?: string
   onInputChange?: (input: string) => void
+  /** True when no Gemini API key is saved yet; shows the first-run notice. */
+  needsApiKey?: boolean
   weekDays?: WeekDay[]
   onDayClick?: (dayOfWeek: number) => void
   todayTheme?: DayTheme | null
@@ -47,19 +50,15 @@ function voiceErrorMessage(error: SpeechError): string {
   }
 }
 
-export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings, onViewHistory, initialInput = '', onInputChange, weekDays, onDayClick, todayTheme }: LandingScreenProps) {
+export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings, onViewHistory, initialInput = '', onInputChange, needsApiKey, weekDays, onDayClick, todayTheme }: LandingScreenProps) {
   const [input, setInput] = useState(initialInput)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [voiceError, setVoiceError] = useState<string | null>(null)
-  const [isMac, setIsMac] = useState(false)
+  // OS detection for the keyboard shortcut hint; never changes after mount.
+  const [isMac] = useState(() => navigator.userAgent.indexOf('Mac') !== -1)
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
   // Text already in the textarea when recording starts; dictation appends to it.
   const voiceBaseRef = useRef('')
-
-  // Detect OS for keyboard shortcut hint
-  useEffect(() => {
-    setIsMac(navigator.userAgent.indexOf('Mac') !== -1)
-  }, [])
 
   const {
     isSupported: voiceSupported,
@@ -106,12 +105,16 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
     return () => clearInterval(interval)
   }, [isLoading])
 
-  // Show speech errors as voice error messages
-  useEffect(() => {
+  // Show speech errors as voice error messages. Adjusting state during render
+  // (keyed on the previous hook value) avoids an extra effect-driven render and
+  // still lets the user dismiss the message independently of the hook's error.
+  const [lastSpeechError, setLastSpeechError] = useState(speechError)
+  if (speechError !== lastSpeechError) {
+    setLastSpeechError(speechError)
     if (speechError && speechError !== 'not-supported') {
       setVoiceError(voiceErrorMessage(speechError))
     }
-  }, [speechError])
+  }
 
   const handleSubmit = () => {
     const trimmed = input.trim()
@@ -205,6 +208,44 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
               Dump it all out. I'll turn it into a few small tasks.
             </p>
           </div>
+
+          {/* First-run notice: no Gemini key saved yet */}
+          {needsApiKey && (
+            <div
+              className="surface mb-5 rounded-2xl px-5 py-4"
+              role="status"
+              style={{ animation: 'slide-up-fade 300ms ease-out' }}
+            >
+              <p className="text-sm font-medium flex items-center gap-1.5">
+                <SparklesIcon size={15} style={{ color: 'var(--t-accent)' }} />
+                One quick setup step
+              </p>
+              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--t-text-light)' }}>
+                Turning brain dumps into tasks uses Google Gemini, which needs a free API key.
+                It takes about a minute and stays on this device.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {onOpenSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="btn btn-primary h-11 px-4 text-sm !rounded-xl"
+                  >
+                    Add key in Settings
+                  </button>
+                )}
+                <a
+                  href={GEMINI_KEY_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center min-h-[44px] text-sm underline underline-offset-2"
+                  style={{ color: 'var(--t-accent)' }}
+                >
+                  Get a free key
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* Error message */}
           {displayError && (

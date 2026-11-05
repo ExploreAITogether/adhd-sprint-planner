@@ -212,7 +212,7 @@ Create `/src/lib/gemini.ts` with:
 
 1. A function to initialize/configure the Gemini API
    - Use Gemini 1.5 Flash model (free tier)
-   - API key should be stored securely (use environment variable VITE_GEMINI_API_KEY for now)
+   - API key should be stored securely (originally a Vite environment variable; now stored in the local SQLite settings table and entered in Settings)
 
 2. A function `parseBrainDump(text: string): Promise<Task[]>` that:
    - Sends the brain dump text to Gemini
@@ -222,7 +222,7 @@ For now, just set up the API connection and a basic test call. We'll craft the a
 
 Also create a `.env.example` file showing what environment variables are needed:
 ```
-VITE_GEMINI_API_KEY=your_gemini_api_key_here
+# (historical) GEMINI key placeholder — superseded by the in-app Settings key
 ```
 
 Add .env to .gitignore if not already there.

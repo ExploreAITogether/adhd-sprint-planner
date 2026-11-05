@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { initDatabase, createSprintWithTasks, getActiveSprint, getSprintById, getWeekDays, setDayTheme, clearDayTheme } from './lib/database'
 import { parseBrainDump } from './lib/gemini'
+import { hasApiKey } from './lib/geminiConfig'
 import { ThemeProvider } from './contexts/ThemeContext'
 import LandingScreen from './components/LandingScreen'
 import SprintView from './components/SprintView'
@@ -24,6 +25,8 @@ function AppContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  // null = not checked yet; false = show the first-run key notice.
+  const [apiKeySet, setApiKeySet] = useState<boolean | null>(null)
   const [weekDays, setWeekDays] = useState<WeekDay[]>([])
   const [themeEditorOpen, setThemeEditorOpen] = useState(false)
   const [selectedDayForEdit, setSelectedDayForEdit] = useState<number | null>(null)
@@ -42,6 +45,10 @@ function AppContent() {
     }
   }, [])
 
+  const refreshApiKeyStatus = useCallback(async () => {
+    setApiKeySet(await hasApiKey())
+  }, [])
+
   useEffect(() => {
     async function init() {
       try {
@@ -58,12 +65,22 @@ function AppContent() {
         // Load week data
         const days = await getWeekDays()
         setWeekDays(days)
+
+        // Bring-your-own-key: decide whether to show the first-run notice
+        setApiKeySet(await hasApiKey())
       } catch (err) {
         setDbError(String(err))
       }
     }
     init()
   }, [])
+
+  // Re-check the key whenever Settings closes, so the first-run notice
+  // disappears as soon as a key is saved.
+  const handleSettingsClose = useCallback(() => {
+    setShowSettings(false)
+    refreshApiKeyStatus()
+  }, [refreshApiKeyStatus])
 
   const handleSubmit = useCallback(async (rawInput: string) => {
     setIsLoading(true)
@@ -90,6 +107,9 @@ function AppContent() {
       console.error('Failed to process brain dump:', err)
       const message = err instanceof Error ? err.message : 'Something went wrong'
       setError(message)
+      if (err instanceof Error && err.name === 'MissingApiKeyError') {
+        setApiKeySet(false)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -277,13 +297,14 @@ function AppContent() {
           onViewHistory={handleViewHistory}
           initialInput={landingDraft}
           onInputChange={setLandingDraft}
+          needsApiKey={apiKeySet === false}
           weekDays={weekDays}
           onDayClick={handleDayClick}
           todayTheme={todayTheme}
         />
       )}
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal onClose={handleSettingsClose} />}
 
       <ThemeEditorModal
         isOpen={themeEditorOpen}
