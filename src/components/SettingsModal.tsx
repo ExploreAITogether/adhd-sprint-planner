@@ -83,6 +83,20 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     }
   }, [apiKey, savedApiKey, showSaved])
 
+  // Remove the saved key. App re-checks when Settings closes, so the first-run
+  // notice comes back and AI features show the "add your key" message.
+  const handleClearApiKey = useCallback(async () => {
+    setApiKeyError(null)
+    try {
+      await updateSettings({ api_key: null })
+      setApiKey('')
+      setSavedApiKey('')
+      showSaved('apiKey')
+    } catch {
+      setApiKeyError("Couldn't clear the key. Please try again.")
+    }
+  }, [showSaved])
+
   const handleApiKeyKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -190,15 +204,27 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--t-text-faint)' }}>
               Stored only on this device. Brain dumps are sent to Gemini under your key.
             </p>
-            <a
-              href={GEMINI_KEY_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center min-h-[44px] text-xs font-medium underline underline-offset-2"
-              style={{ color: 'var(--t-accent)' }}
-            >
-              Get a free key from Google AI Studio
-            </a>
+            <div className="flex items-center justify-between gap-3">
+              <a
+                href={GEMINI_KEY_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center min-h-[44px] text-xs font-medium underline underline-offset-2"
+                style={{ color: 'var(--t-accent)' }}
+              >
+                Get a free key from Google AI Studio
+              </a>
+              {savedApiKey && (
+                <button
+                  type="button"
+                  onClick={handleClearApiKey}
+                  className="shrink-0 min-h-[44px] px-1 text-xs font-medium hover:underline underline-offset-2"
+                  style={{ color: 'var(--t-red-text)' }}
+                >
+                  Clear key
+                </button>
+              )}
+            </div>
             <div className="surface rounded-xl mt-1 overflow-hidden">
               <button
                 type="button"

@@ -208,6 +208,7 @@ src-tauri/                  # Rust backend
 - [ ] Settings persist across app restart
 - [ ] Fresh install shows the "add a Gemini key" notice; saving a key in Settings enables parsing and Help Me prompts
 - [ ] Rejected API key shows a message pointing at Settings
+- [ ] Clear key in Settings brings the first-run notice back, and AI calls ask for a key again
 - [ ] Theme switching (light/dark/system) works
 - [ ] Window resizing down to 400px minimum width
 - [ ] Error boundary catches unexpected crashes
