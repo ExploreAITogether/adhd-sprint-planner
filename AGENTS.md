@@ -24,7 +24,7 @@ src/
 │   ├── WeeklyStrip.tsx      # Horizontal Mon-Sun strip with theme emojis + completion dots
 │   ├── ThemeEditorModal.tsx # Modal to set/edit/clear a day's theme
 │   ├── HelpPromptModal.tsx  # AI-generated help prompts for tasks
-│   ├── SettingsModal.tsx    # Gemini API key, theme, sound, export path settings
+│   ├── SettingsModal.tsx    # Gemini API key (+ free-tier guide), theme, sound settings
 │   └── ErrorBoundary.tsx    # Global error handler
 ├── lib/
 │   ├── database.ts          # All SQLite CRUD operations + getWeekDays helper
@@ -88,7 +88,7 @@ src-tauri/
 |--------|------|-------|
 | sound_enabled | INTEGER | 0/1 boolean |
 | theme | TEXT | 'light' \| 'dark' \| 'system' |
-| export_path | TEXT | Saved export directory |
+| export_path | TEXT | Folder of the last History export; the save dialog opens there next time. Set automatically, not shown in Settings |
 | api_key | TEXT | User's Gemini API key (nullable; null until set in Settings) |
 
 **day_themes** — Weekly day themes (one per weekday).

@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { format, isToday, isYesterday } from 'date-fns'
 import { save } from '@tauri-apps/plugin-dialog'
 import { writeTextFile } from '@tauri-apps/plugin-fs'
+import { dirname, join } from '@tauri-apps/api/path'
 import type { Sprint, Task } from '../types'
-import { getSprintHistory, searchSprintHistory } from '../lib/database'
+import { getSettings, getSprintHistory, searchSprintHistory, updateSettings } from '../lib/database'
 import Toast from './Toast'
 import {
   CheckIcon,
@@ -253,8 +254,12 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
       const markdown = generateMarkdown(dateGroups, debouncedQuery)
       const defaultName = `task-history-${format(new Date(), 'yyyy-MM-dd')}.md`
 
+      // Open the save dialog in the folder used for the last export, if any.
+      const lastFolder = await getSettings().then((s) => s.export_path).catch(() => '')
+      const defaultPath = lastFolder ? await join(lastFolder, defaultName).catch(() => defaultName) : defaultName
+
       const filePath = await save({
-        defaultPath: defaultName,
+        defaultPath,
         filters: [{ name: 'Markdown', extensions: ['md'] }],
       })
 
@@ -262,6 +267,11 @@ export default function HistoryView({ onBack, onOpenSettings }: HistoryViewProps
 
       await writeTextFile(filePath, markdown)
       setToast({ message: 'History exported!', tone: 'success' })
+
+      // Remember this folder for next time. Best effort only.
+      dirname(filePath)
+        .then((folder) => updateSettings({ export_path: folder }))
+        .catch(() => {})
     } catch (err) {
       console.error('Export failed:', err)
       setToast({ message: 'Export failed. Please try again.', tone: 'error' })

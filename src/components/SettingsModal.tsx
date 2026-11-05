@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { open } from '@tauri-apps/plugin-dialog'
 import { useTheme } from '../hooks/useTheme'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { getSettings, updateSettings } from '../lib/database'
 import { GEMINI_KEY_URL, GOOGLE_BILLING_URL, GOOGLE_BILLING_HELP_URL } from '../lib/geminiConfig'
 import type { Settings } from '../types'
 import ModalShell from './ModalShell'
-import { CheckIcon, EyeIcon, EyeOffIcon, MonitorIcon, MoonIcon, SunIcon } from './icons'
+import { CheckIcon, ChevronDownIcon, EyeIcon, EyeOffIcon, MonitorIcon, MoonIcon, SparklesIcon, SunIcon } from './icons'
 
 interface SettingsModalProps {
   onClose: () => void
@@ -17,7 +16,6 @@ type ThemeOption = Settings['theme']
 export default function SettingsModal({ onClose }: SettingsModalProps) {
   const { theme, setTheme } = useTheme()
   const [soundEnabled, setSoundEnabled] = useState(true)
-  const [exportPath, setExportPath] = useState('')
   const [apiKey, setApiKey] = useState('')
   // The key as last persisted, so the Save button only lights up on real changes.
   const [savedApiKey, setSavedApiKey] = useState('')
@@ -34,7 +32,6 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     getSettings()
       .then((s) => {
         setSoundEnabled(s.sound_enabled)
-        setExportPath(s.export_path)
         setApiKey(s.api_key ?? '')
         setSavedApiKey(s.api_key ?? '')
       })
@@ -93,24 +90,6 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     }
   }, [handleSaveApiKey])
 
-  // Change export path
-  const handleChangeExportPath = useCallback(async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: 'Choose export folder',
-      })
-      if (selected && typeof selected === 'string') {
-        setExportPath(selected)
-        updateSettings({ export_path: selected }).catch(() => {})
-        showSaved('export')
-      }
-    } catch {
-      // User cancelled
-    }
-  }, [showSaved])
-
   // Close with animation
   const handleClose = useCallback(() => {
     setIsClosing(true)
@@ -133,13 +112,6 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     { value: 'dark', label: 'Dark', icon: <MoonIcon size={15} /> },
     { value: 'system', label: 'System', icon: <MonitorIcon size={15} /> },
   ]
-
-  // Truncate long path for display
-  const displayPath = exportPath
-    ? exportPath.length > 40
-      ? '...' + exportPath.slice(-37)
-      : exportPath
-    : 'Not set'
 
   const keyStatus = savedApiKey
     ? 'Key saved on this device'
@@ -227,19 +199,43 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             >
               Get a free key from Google AI Studio
             </a>
-            <div className="surface rounded-xl px-3 py-1 mt-1">
+            <div className="surface rounded-xl mt-1 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowFreeTierGuide((shown) => !shown)}
                 aria-expanded={showFreeTierGuide}
                 aria-controls="free-tier-guide"
-                className="w-full min-h-[44px] text-left text-xs font-medium underline underline-offset-2"
-                style={{ color: 'var(--t-accent)' }}
+                className="w-full min-h-[56px] px-3.5 py-2.5 flex items-center gap-3 text-left
+                  transition-colors duration-150 hover:bg-[var(--t-neutral-btn-bg)]"
               >
-                {showFreeTierGuide ? 'Hide free-tier guide' : 'Use Gemini’s free tier'}
+                <span
+                  className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: 'var(--t-accent-soft)', color: 'var(--t-accent)' }}
+                  aria-hidden="true"
+                >
+                  <SparklesIcon size={16} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-medium">How to use Gemini’s free tier</span>
+                  <span className="block text-xs mt-0.5" style={{ color: 'var(--t-text-light)' }}>
+                    Step-by-step guide, no billing needed
+                  </span>
+                </span>
+                <ChevronDownIcon
+                  size={18}
+                  className="shrink-0 transition-transform duration-200"
+                  style={{
+                    color: 'var(--t-text-faint)',
+                    transform: showFreeTierGuide ? 'rotate(180deg)' : 'none',
+                  }}
+                />
               </button>
               {showFreeTierGuide && (
-                <div id="free-tier-guide" className="pb-3 text-xs leading-relaxed" style={{ color: 'var(--t-text-light)' }}>
+                <div
+                  id="free-tier-guide"
+                  className="px-3.5 pt-3 pb-3 text-xs leading-relaxed"
+                  style={{ color: 'var(--t-text-light)', borderTop: '1px solid var(--t-border-light)' }}
+                >
                   <p>
                     In Google AI Studio, create a key in a new project and keep its billing tier
                     on <strong>Free</strong>. You don’t need to set up billing or buy prepaid credits
@@ -344,30 +340,6 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             </div>
           </div>
 
-          <div className="divider" />
-
-          {/* Export path */}
-          <div>
-            <div className="flex items-center justify-between mb-2.5">
-              <p className="text-[15px] font-medium">Default export location</p>
-              {savedField === 'export' && <SavedIndicator />}
-            </div>
-            <div className="flex items-center gap-2.5">
-              <span
-                className="text-xs flex-1 min-w-0 truncate px-3 h-9 flex items-center rounded-xl font-mono"
-                style={{
-                  backgroundColor: 'var(--t-code-bg)',
-                  color: exportPath ? 'var(--t-text-light)' : 'var(--t-text-faint)',
-                }}
-                title={exportPath || 'Not set'}
-              >
-                {displayPath}
-              </span>
-              <button onClick={handleChangeExportPath} className="btn btn-secondary shrink-0 text-sm px-4 h-9 !rounded-xl">
-                Change
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Footer: app info */}

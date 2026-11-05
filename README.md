@@ -17,9 +17,9 @@ A calming desktop app that takes messy brain dumps and turns them into clear, ma
 - **Completion sounds** -- subtle audio chimes using Web Audio API
 - **"Help Me" prompts** -- AI generates ready-to-paste prompts for any task
 - **Sprint history** with search, tag filtering, and date grouping
-- **Markdown export** -- save your history to `.md` files
+- **Markdown export** -- save your history to `.md` files; the save dialog remembers the last folder you used
 - **Light / Dark / System themes** -- calm palettes that follow your OS preference
-- **Settings** -- paste your own Gemini API key, toggle sounds, pick theme, set default export location
+- **Settings** -- paste your own Gemini API key, toggle sounds, pick theme
 - **Local-first storage** -- SQLite database, your data stays on your device
 - **Cross-platform** -- macOS and Windows via Tauri
 
