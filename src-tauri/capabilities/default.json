@@ -16,6 +16,10 @@
     "fs:default",
     "fs:allow-write-text-file",
     {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://aistudio.google.com/apikey" }]
+    },
+    {
       "identifier": "fs:scope",
       "allow": [
         { "path": "$DOWNLOAD/**" },

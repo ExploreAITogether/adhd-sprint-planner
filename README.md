@@ -19,7 +19,7 @@ A calming desktop app that takes messy brain dumps and turns them into clear, ma
 - **Sprint history** with search, tag filtering, and date grouping
 - **Markdown export** -- save your history to `.md` files
 - **Light / Dark / System themes** -- calm palettes that follow your OS preference
-- **Settings** -- toggle sounds, pick theme, set default export location
+- **Settings** -- paste your own Gemini API key, toggle sounds, pick theme, set default export location
 - **Local-first storage** -- SQLite database, your data stays on your device
 - **Cross-platform** -- macOS and Windows via Tauri
 
@@ -46,7 +46,7 @@ A calming desktop app that takes messy brain dumps and turns them into clear, ma
   - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
   - **Windows**: [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with "Desktop development with C++"
   - **Linux**: `sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev`
-- A [Gemini API key](https://aistudio.google.com/apikey) (free)
+- A [Gemini API key](https://aistudio.google.com/apikey) (free) -- entered inside the app, see below
 
 ### Setup
 
@@ -58,21 +58,21 @@ cd adhd-sprint-planner
 # Install dependencies
 npm install
 
-# Set up your API key
-cp .env.example .env
-# Edit .env and paste your Gemini API key
-
 # Run in development
 npm run tauri dev
 ```
 
-### Environment Variables
+### Gemini API key (bring your own)
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_GEMINI_API_KEY` | Your Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey) |
+The app does not ship with an API key. On first launch you'll see a notice
+above the brain dump box; click **Add key in Settings** (or the gear icon),
+paste a key from [Google AI Studio](https://aistudio.google.com/apikey), and
+press **Save**. The free tier is plenty for personal use.
 
-`VITE_GEMINI_API_KEY` is embedded into production bundles by Vite at build time. Do not commit `.env`, and rebuild the app after changing or rotating the key.
+The key is stored in the app's local SQLite database on your machine and is
+sent only to Google's Gemini API, in a request header, when you parse a brain
+dump or generate a "Help Me" prompt. No `.env` file or rebuild is needed to
+change or rotate it.
 
 ## Building for Release
 
@@ -82,9 +82,8 @@ The [Release workflow](.github/workflows/release.yml) builds installers for
 **macOS** (universal binary: Apple Silicon + Intel) and **Windows** (.msi and
 .exe) and attaches them to a draft GitHub Release.
 
-**One-time setup:** add a repository secret named `GEMINI_API_KEY` containing
-your Gemini API key (Settings → Secrets and variables → Actions). The key is
-baked into the bundle at build time.
+No secrets are needed: the build contains no API key. Each user adds their
+own Gemini key in Settings after installing.
 
 **To cut a release**, either:
 
@@ -185,6 +184,8 @@ src-tauri/                  # Rust backend
 - [ ] Markdown export creates valid file
 - [ ] Help prompts generate and cache correctly
 - [ ] Settings persist across app restart
+- [ ] Fresh install shows the "add a Gemini key" notice; saving a key in Settings enables parsing and Help Me prompts
+- [ ] Rejected API key shows a message pointing at Settings
 - [ ] Theme switching (light/dark/system) works
 - [ ] Window resizing down to 400px minimum width
 - [ ] Error boundary catches unexpected crashes
@@ -198,7 +199,12 @@ All data is stored locally in a SQLite database:
 - **Windows**: `%APPDATA%/com.adhd-sprint-planner.app/adhd-sprint-planner.db`
 - **Linux**: `~/.local/share/com.adhd-sprint-planner.app/adhd-sprint-planner.db`
 
-No data is sent to any server except the Gemini API for task parsing and prompt generation.
+## Privacy
+
+- **Everything stays local.** Sprints, tasks, day themes, settings, and your Gemini API key live in the SQLite database above. There is no account, no telemetry, and no sync.
+- **What leaves your machine.** When you click *Make tasks*, the brain dump text is sent to Google's Gemini API using your own API key. When you open *Help Me* on a task, that task's title and tags are sent the same way. Nothing else is transmitted. Google's handling of that data is governed by the [Gemini API terms](https://ai.google.dev/gemini-api/terms).
+- **Voice input** uses the platform's Web Speech API, which may route audio through the OS or browser vendor's speech service depending on your system.
+- **Markdown export** writes only to the folder you choose (Downloads, Documents, or Desktop).
 
 ## Future Ideas
 
@@ -214,4 +220,4 @@ No data is sent to any server except the Gemini API for task parsing and prompt 
 
 ## License
 
-MIT
+[MIT](LICENSE)

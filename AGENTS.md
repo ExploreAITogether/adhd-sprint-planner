@@ -24,10 +24,11 @@ src/
 │   ├── WeeklyStrip.tsx      # Horizontal Mon-Sun strip with theme emojis + completion dots
 │   ├── ThemeEditorModal.tsx # Modal to set/edit/clear a day's theme
 │   ├── HelpPromptModal.tsx  # AI-generated help prompts for tasks
-│   ├── SettingsModal.tsx    # Theme, sound, export path settings
+│   ├── SettingsModal.tsx    # Gemini API key, theme, sound, export path settings
 │   └── ErrorBoundary.tsx    # Global error handler
 ├── lib/
 │   ├── database.ts          # All SQLite CRUD operations + getWeekDays helper
+│   ├── geminiConfig.ts      # Gemini model URL + API key lookup from settings (BYOK)
 │   ├── gemini.ts            # Gemini API: brain dump → parsed tasks
 │   ├── promptGenerator.ts   # Gemini API: task → help prompt for Codex/ChatGPT
 │   └── sounds.ts            # Web Audio API sound effects
@@ -42,8 +43,8 @@ src/
 src-tauri/
 ├── src/
 │   ├── main.rs              # Tauri entry point
-│   └── lib.rs               # Plugin registration (single-instance, sql, dialog, fs, window-state)
-├── Cargo.toml               # Rust deps: tauri, tauri-plugin-sql, dialog, fs, single-instance
+│   └── lib.rs               # Plugin registration (single-instance, sql, dialog, fs, window-state, opener)
+├── Cargo.toml               # Rust deps: tauri, tauri-plugin-sql, dialog, fs, single-instance, opener
 ├── tauri.conf.json           # App config (window size, identifier, build paths)
 └── capabilities/default.json # Security permissions for Tauri plugins
 ```
@@ -52,7 +53,7 @@ src-tauri/
 
 - **`src/App.tsx`** — Main app state (active sprint, current view, weekly themes, loading/error). Routes between `LandingScreen`, `SprintView`, and `HistoryView`. Manages day theme editing flow and weekly strip data refresh.
 - **`src/lib/database.ts`** — All database operations. Singleton `getDb()` pattern. Schema creation in `initDatabase()`. CRUD for sprints, tasks, settings, and day themes.
-- **`src/lib/gemini.ts`** — Calls Gemini 2.5 Flash to parse brain dump text into 1-5 tasks with title, emoji, and tags. API key from `VITE_GEMINI_API_KEY` env var. Model URL is centralized in `src/lib/geminiConfig.ts`.
+- **`src/lib/gemini.ts`** — Calls Gemini 2.5 Flash to parse brain dump text into 1-5 tasks with title, emoji, and tags. API key comes from the `settings.api_key` column via `getApiKey()` in `src/lib/geminiConfig.ts`, which also centralizes the model URL and the user-facing missing/invalid key messages.
 - **`src/lib/promptGenerator.ts`** — Generates AI-friendly help prompts for individual tasks. Results cached in the `tasks.generated_prompt` column.
 - **`src/types/index.ts`** — All shared TypeScript interfaces.
 
@@ -87,6 +88,7 @@ src-tauri/
 | sound_enabled | INTEGER | 0/1 boolean |
 | theme | TEXT | 'light' \| 'dark' \| 'system' |
 | export_path | TEXT | Saved export directory |
+| api_key | TEXT | User's Gemini API key (nullable; null until set in Settings) |
 
 **day_themes** — Weekly day themes (one per weekday).
 | Column | Type | Notes |
@@ -100,7 +102,7 @@ src-tauri/
 
 - `Sprint` — id, created_at, status, raw_input, tasks[]
 - `Task` — id, sprint_id, title, emoji, tags[], status, completed_at, generated_prompt, position
-- `Settings` — sound_enabled, theme, export_path
+- `Settings` — sound_enabled, theme, export_path, api_key
 - `DayTheme` — id, day_of_week, name, emoji
 - `WeekDay` — dayOfWeek, label, date, theme, isToday, hasCompletedTasks
 
@@ -130,14 +132,19 @@ src-tauri/
 - Optimistic UI updates — state changes immediately, DB writes in background
 - `@dnd-kit` for drag-to-reorder tasks with position tracking
 
-### API Key
-- Gemini API key set via `VITE_GEMINI_API_KEY` environment variable (`.env` file)
-- Key is **baked into the bundle at build time** by Vite — rotating the key requires `npm run tauri build` and reinstalling for the change to reach the desktop app
+### API Key (bring your own)
+- No key ships with the app and nothing is read from the environment at build time. Each user pastes their own Gemini key into **Settings → Gemini API key**; it is stored in the `settings.api_key` column of the local SQLite database.
+- `getApiKey()` in `src/lib/geminiConfig.ts` is async, reads settings, and throws `MissingApiKeyError` (friendly message pointing at Settings) when no key is saved. `hasApiKey()` drives the first-run notice on `LandingScreen`.
+- The key is sent as the `x-goog-api-key` request header, never as a `?key=` URL parameter.
+- `App.tsx` re-checks the key when `SettingsModal` closes so the first-run notice disappears as soon as a key is saved.
+- 401/403 responses surface `INVALID_API_KEY_MESSAGE` (points at Settings) in both brain dump parsing and Help Me prompts.
 - Model URL lives in `src/lib/geminiConfig.ts`. Update there if Gemini deprecates the current model (history: `gemini-2.0-flash` → `gemini-2.5-flash` after 2.0 hit `RESOURCE_EXHAUSTED` 429s on free tier)
+- Never commit a real key anywhere in the repo, including docs and tests.
 - Voice-to-text does **not** use Gemini. It uses the Web Speech API via `useSpeechRecognition`; Gemini is used for brain dump parsing and Help Me prompt generation.
 
 ### Tauri Security
 - `tauri-plugin-shell` is intentionally not registered; do not add shell permissions unless a feature truly needs external URL/process opening.
+- `tauri-plugin-opener` is registered only so the "get a Gemini API key" links can open the system browser. Its `opener:allow-open-url` scope in `default.json` allows exactly `https://aistudio.google.com/apikey`; widen it only if a feature truly needs another URL. The plugin's init script routes `<a target="_blank">` clicks through that same scope, so other external links stay blocked.
 - `default.json` limits markdown export writes to `$DOWNLOAD/**`, `$DOCUMENT/**`, and `$DESKTOP/**`. Avoid re-adding broad `$HOME/**` filesystem scope.
 - `tauri.conf.json` defines a CSP. Keep script sources tight; inline styles are currently allowed because the React UI uses many inline CSS custom-property styles.
 

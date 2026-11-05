@@ -3,6 +3,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { useTheme } from '../contexts/ThemeContext'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { getSettings, updateSettings } from '../lib/database'
+import { GEMINI_KEY_URL } from '../lib/geminiConfig'
 import type { Settings } from '../types'
 
 interface SettingsModalProps {
@@ -15,6 +16,11 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   const { theme, setTheme } = useTheme()
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [exportPath, setExportPath] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  // The key as last persisted, so the Save button only lights up on real changes.
+  const [savedApiKey, setSavedApiKey] = useState('')
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null)
   const [savedField, setSavedField] = useState<string | null>(null)
   const [isClosing, setIsClosing] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -26,6 +32,8 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       .then((s) => {
         setSoundEnabled(s.sound_enabled)
         setExportPath(s.export_path)
+        setApiKey(s.api_key ?? '')
+        setSavedApiKey(s.api_key ?? '')
       })
       .catch(() => {})
   }, [])
@@ -58,6 +66,29 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     setTheme(newTheme)
     showSaved('theme')
   }, [setTheme, showSaved])
+
+  // Save Gemini API key (bring-your-own-key). Stored only in local SQLite.
+  const apiKeyDirty = apiKey.trim() !== savedApiKey
+  const handleSaveApiKey = useCallback(async () => {
+    const trimmed = apiKey.trim()
+    if (trimmed === savedApiKey) return
+    setApiKeyError(null)
+    try {
+      await updateSettings({ api_key: trimmed.length > 0 ? trimmed : null })
+      setApiKey(trimmed)
+      setSavedApiKey(trimmed)
+      showSaved('apiKey')
+    } catch {
+      setApiKeyError("Couldn't save the key. Please try again.")
+    }
+  }, [apiKey, savedApiKey, showSaved])
+
+  const handleApiKeyKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSaveApiKey()
+    }
+  }, [handleSaveApiKey])
 
   // Change export path
   const handleChangeExportPath = useCallback(async () => {
@@ -114,6 +145,10 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
       : exportPath
     : 'Not set'
 
+  const keyStatus = savedApiKey
+    ? 'Key saved on this device'
+    : 'No key yet. AI parsing and Help Me prompts need one.'
+
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center p-6
@@ -163,6 +198,113 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
 
           {/* Settings list */}
           <div className="flex flex-col gap-6">
+            {/* Gemini API key (bring-your-own-key) */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <label htmlFor="gemini-api-key" className="text-[15px] font-medium block" style={{ color: 'var(--t-text)' }}>
+                    Gemini API key
+                  </label>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-light)' }}>
+                    {keyStatus}
+                  </p>
+                </div>
+                {savedField === 'apiKey' && <SavedIndicator />}
+              </div>
+              <div className="flex items-stretch gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <input
+                    id="gemini-api-key"
+                    type={showApiKey ? 'text' : 'password'}
+                    value={apiKey}
+                    onChange={(e) => {
+                      setApiKey(e.target.value)
+                      setApiKeyError(null)
+                    }}
+                    onKeyDown={handleApiKeyKeyDown}
+                    placeholder="Paste your key here"
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full min-h-[44px] rounded-xl pl-3 pr-11 text-sm font-mono
+                      focus:outline-none focus:ring-2 transition-colors duration-200"
+                    style={{
+                      backgroundColor: 'var(--t-input-bg)',
+                      color: 'var(--t-text)',
+                      border: '1px solid var(--t-border)',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey((v) => !v)}
+                    className="absolute top-0 right-0 h-full min-w-[44px] flex items-center justify-center
+                      rounded-r-xl transition-colors duration-150"
+                    style={{ color: 'var(--t-text-faint)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--t-text-light)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--t-text-faint)' }}
+                    aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                    aria-pressed={showApiKey}
+                    title={showApiKey ? 'Hide' : 'Show'}
+                  >
+                    {showApiKey ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveApiKey}
+                  disabled={!apiKeyDirty}
+                  className="shrink-0 min-h-[44px] text-sm font-medium px-4 rounded-xl border transition-all duration-200
+                    disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    borderColor: apiKeyDirty ? 'var(--t-accent)' : 'var(--t-border)',
+                    color: apiKeyDirty ? 'var(--t-accent)' : 'var(--t-text-light)',
+                    backgroundColor: 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (apiKeyDirty) e.currentTarget.style.backgroundColor = 'var(--t-accent-glow-strong)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+              {apiKeyError && (
+                <p className="text-xs mt-2" role="alert" style={{ color: 'var(--t-red)' }}>
+                  {apiKeyError}
+                </p>
+              )}
+              <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--t-text-faint)' }}>
+                Stored only on this device. Brain dumps are sent to Gemini under your key.
+              </p>
+              <a
+                href={GEMINI_KEY_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center min-h-[44px] text-xs font-medium underline underline-offset-2"
+                style={{ color: 'var(--t-accent)' }}
+              >
+                Get a free key from Google AI Studio
+              </a>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px" style={{ backgroundColor: 'var(--t-border-light)' }} />
+
             {/* Sound toggle */}
             <div className="flex items-center justify-between">
               <div>

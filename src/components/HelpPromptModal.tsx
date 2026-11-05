@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Task } from '../types'
 import { generateHelpPrompt } from '../lib/promptGenerator'
+import { INVALID_API_KEY_MESSAGE } from '../lib/geminiConfig'
 import { updateTaskPrompt } from '../lib/database'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 
@@ -10,6 +11,14 @@ interface HelpPromptModalProps {
 }
 
 type ModalState = 'loading' | 'success' | 'error'
+
+/** Surface user-fixable problems (missing or rejected API key) verbatim; keep everything else generic. */
+function promptErrorMessage(err: unknown): string {
+  if (err instanceof Error && (err.name === 'MissingApiKeyError' || err.message === INVALID_API_KEY_MESSAGE)) {
+    return err.message
+  }
+  return 'Something went wrong generating the prompt.'
+}
 
 export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps) {
   // A cached prompt is shown immediately — one less decision for the user.
@@ -42,9 +51,9 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
         updateTaskPrompt(task.id, result).catch((err) =>
           console.error('Failed to cache prompt:', err)
         )
-      } catch {
+      } catch (err) {
         if (cancelled) return
-        setError('Something went wrong generating the prompt.')
+        setError(promptErrorMessage(err))
         setState('error')
       }
     }
@@ -65,8 +74,8 @@ export default function HelpPromptModal({ task, onClose }: HelpPromptModalProps)
       updateTaskPrompt(task.id, result).catch((err) =>
         console.error('Failed to cache prompt:', err)
       )
-    } catch {
-      setError('Something went wrong generating the prompt.')
+    } catch (err) {
+      setError(promptErrorMessage(err))
       setState('error')
     }
   }, [task])

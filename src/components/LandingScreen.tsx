@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useSpeechRecognition, type SpeechError } from '../hooks/useSpeechRecognition'
 import type { WeekDay, DayTheme } from '../types'
+import { GEMINI_KEY_URL } from '../lib/geminiConfig'
 import WeeklyStrip from './WeeklyStrip'
 
 interface LandingScreenProps {
@@ -9,6 +10,8 @@ interface LandingScreenProps {
   error?: string | null
   onDismissError?: () => void
   onOpenSettings?: () => void
+  /** True when no Gemini API key is saved yet; shows the first-run notice. */
+  needsApiKey?: boolean
   weekDays?: WeekDay[]
   onDayClick?: (dayOfWeek: number) => void
   todayTheme?: DayTheme | null
@@ -41,7 +44,7 @@ function voiceErrorMessage(error: SpeechError): string {
   }
 }
 
-export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings, weekDays, onDayClick, todayTheme }: LandingScreenProps) {
+export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings, needsApiKey, weekDays, onDayClick, todayTheme }: LandingScreenProps) {
   const [input, setInput] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [voiceError, setVoiceError] = useState<string | null>(null)
@@ -212,6 +215,53 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
               What do you need to get done?
             </h1>
           </div>
+
+          {/* First-run notice: no Gemini key saved yet */}
+          {needsApiKey && (
+            <div
+              className="mb-5 rounded-xl px-5 py-4"
+              role="status"
+              style={{
+                backgroundColor: 'var(--t-tag-bg)',
+                border: '1px solid var(--t-accent-glow)',
+                animation: 'slide-up-fade 300ms ease-out',
+              }}
+            >
+              <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>
+                One quick setup step
+              </p>
+              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--t-text-light)' }}>
+                Turning brain dumps into tasks uses Google Gemini, which needs a free API key.
+                It takes about a minute and stays on this device.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {onOpenSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="min-h-[44px] px-4 rounded-xl text-sm font-medium text-white
+                      transition-all duration-200 hover:scale-[1.02] active:scale-[0.99]
+                      focus:outline-none focus:ring-2 focus:ring-offset-2"
+                    style={{
+                      background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
+                      boxShadow: '0 2px 12px var(--t-accent-shadow)',
+                    }}
+                  >
+                    Add key in Settings
+                  </button>
+                )}
+                <a
+                  href={GEMINI_KEY_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center min-h-[44px] text-sm underline underline-offset-2"
+                  style={{ color: 'var(--t-accent)' }}
+                >
+                  Get a free key
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* Error message */}
           {displayError && (

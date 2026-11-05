@@ -1,5 +1,5 @@
 import type { Task } from '../types';
-import { GEMINI_API_URL, getApiKey } from './geminiConfig';
+import { GEMINI_API_URL, INVALID_API_KEY_MESSAGE, geminiHeaders, getApiKey } from './geminiConfig';
 import type { GeminiResponse } from './geminiConfig';
 
 const SYSTEM_PROMPT = `You are a helpful task parser for an ADHD-friendly sprint planner app. Your job is to take messy, stream-of-consciousness brain dumps and extract clear, actionable tasks.
@@ -81,7 +81,7 @@ function parseGeminiResponse(responseText: string): GeminiTaskResult[] {
 }
 
 export async function parseBrainDump(text: string): Promise<Omit<Task, 'id' | 'sprint_id' | 'position'>[]> {
-  const apiKey = getApiKey();
+  const apiKey = await getApiKey();
 
   const body = {
     system_instruction: {
@@ -107,9 +107,9 @@ export async function parseBrainDump(text: string): Promise<Omit<Task, 'id' | 's
 
   let response: Response;
   try {
-    response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    response = await fetch(GEMINI_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: geminiHeaders(apiKey),
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -129,7 +129,7 @@ export async function parseBrainDump(text: string): Promise<Omit<Task, 'id' | 's
       throw new Error('Slow down! Take a breath and try again in a minute.');
     }
     if (response.status === 401 || response.status === 403) {
-      throw new Error("There's an issue with the AI setup. Check your API key in the .env file.");
+      throw new Error(INVALID_API_KEY_MESSAGE);
     }
     throw new Error(`Something went wrong with the AI (${response.status}). ${errorBody.slice(0, 100)}`);
   }

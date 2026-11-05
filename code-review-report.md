@@ -10,7 +10,9 @@
 
 ### C1. API key leaked in frontend bundle and network requests
 **File:** `src/lib/gemini.ts:120`, `src/lib/promptGenerator.ts:101`
-**What's wrong:** The Gemini API key is embedded via `VITE_GEMINI_API_KEY` which Vite inlines into the production JS bundle as a string literal. Anyone who opens DevTools or inspects the built `.js` files can extract it. Furthermore, `fetch(\`${GEMINI_API_URL}?key=${apiKey}\`)` puts the key in the URL, which means it shows up in browser history, network logs, and any proxy/CDN logs.
+**Status: resolved.** The app now uses a bring-your-own-key flow: the key lives in the local SQLite `settings` table, is entered in Settings, and is sent as a request header. Original finding below.
+
+**What's wrong:** The Gemini API key was embedded via a Vite `VITE_*` environment variable which Vite inlines into the production JS bundle as a string literal. Anyone who opens DevTools or inspects the built `.js` files can extract it. Furthermore, `fetch(\`${GEMINI_API_URL}?key=${apiKey}\`)` puts the key in the URL, which means it shows up in browser history, network logs, and any proxy/CDN logs.
 **What could go wrong:** Someone extracts your API key, racks up usage on your Gemini account (or exhausts your free tier for all users), and you eat the bill. Since this is a desktop app the bundle ships to every user's machine.
 **Suggested fix:** Proxy API calls through a Tauri Rust command. The Rust backend holds the key (read from env at runtime or a secure store), makes the HTTP call, and returns the result. The key never touches the frontend JS bundle.
 

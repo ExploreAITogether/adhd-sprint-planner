@@ -1,5 +1,5 @@
 import type { Task } from '../types';
-import { GEMINI_API_URL, getApiKey } from './geminiConfig';
+import { GEMINI_API_URL, INVALID_API_KEY_MESSAGE, geminiHeaders, getApiKey } from './geminiConfig';
 import type { GeminiResponse } from './geminiConfig';
 
 const META_PROMPT = `You are a helpful AI prompt engineer. Given a task from an ADHD-friendly sprint planner, generate a ready-to-use prompt that the user can paste into any AI assistant (like Claude, ChatGPT, etc.) to get help completing the task.
@@ -45,7 +45,8 @@ const FALLBACK_PROMPT = (title: string) =>
   `Help me with this task: "${title}". Break it down into clear, manageable steps and guide me through completing it. If you need more context, ask me specific questions first.`;
 
 export async function generateHelpPrompt(task: Task): Promise<string> {
-  const apiKey = getApiKey();
+  // Throws MissingApiKeyError when no key is saved; the modal shows that message.
+  const apiKey = await getApiKey();
 
   const tagsContext = task.tags.length > 0
     ? ` (tags: ${task.tags.join(', ')})`
@@ -75,9 +76,9 @@ export async function generateHelpPrompt(task: Task): Promise<string> {
 
   let response: Response;
   try {
-    response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    response = await fetch(GEMINI_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: geminiHeaders(apiKey),
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -91,6 +92,11 @@ export async function generateHelpPrompt(task: Task): Promise<string> {
   }
 
   if (!response.ok) {
+    // A rejected key is something the user can fix, so surface it instead of
+    // silently falling back to the generic prompt.
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(INVALID_API_KEY_MESSAGE);
+    }
     return FALLBACK_PROMPT(task.title);
   }
 
