@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Voice input uses the webview's Web Speech API. macOS denies microphone
+       and speech recognition access outright (no prompt) unless the app
+       declares why it needs them. Tauri merges this file into the bundle. -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>ADHD Sprint Planner uses the microphone so you can dictate your brain dump and new tasks.</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>ADHD Sprint Planner turns your dictation into text so you don't have to type your brain dump.</string>
+</dict>
+</plist>

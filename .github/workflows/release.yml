@@ -50,10 +50,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Baked into the bundle at build time by Vite (see CLAUDE.md).
-          # Set this repository secret before running: Settings → Secrets
-          # and variables → Actions → New repository secret.
-          VITE_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # No API key is baked into the build. Users paste their own Gemini
+          # key into Settings inside the app (stored in local SQLite).
         with:
           tagName: v__VERSION__
           releaseName: 'ADHD Sprint Planner v__VERSION__'

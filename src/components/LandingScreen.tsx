@@ -1,7 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useSpeechRecognition, type SpeechError } from '../hooks/useSpeechRecognition'
 import type { WeekDay, DayTheme } from '../types'
+import { GEMINI_KEY_URL } from '../lib/geminiConfig'
 import WeeklyStrip from './WeeklyStrip'
+import TodayThemeChip from './TodayThemeChip'
+import { HistoryIcon, MicIcon, SettingsIcon, SparklesIcon, Spinner, StopIcon, CloseIcon, AlertIcon } from './icons'
 
 interface LandingScreenProps {
   onSubmit: (input: string) => void
@@ -9,6 +12,12 @@ interface LandingScreenProps {
   error?: string | null
   onDismissError?: () => void
   onOpenSettings?: () => void
+  onViewHistory?: () => void
+  /** Draft text to restore when returning to this screen (e.g. from History). */
+  initialInput?: string
+  onInputChange?: (input: string) => void
+  /** True when no Gemini API key is saved yet; shows the first-run notice. */
+  needsApiKey?: boolean
   weekDays?: WeekDay[]
   onDayClick?: (dayOfWeek: number) => void
   todayTheme?: DayTheme | null
@@ -41,19 +50,15 @@ function voiceErrorMessage(error: SpeechError): string {
   }
 }
 
-export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings, weekDays, onDayClick, todayTheme }: LandingScreenProps) {
-  const [input, setInput] = useState('')
+export default function LandingScreen({ onSubmit, isLoading, error, onDismissError, onOpenSettings, onViewHistory, initialInput = '', onInputChange, needsApiKey, weekDays, onDayClick, todayTheme }: LandingScreenProps) {
+  const [input, setInput] = useState(initialInput)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [voiceError, setVoiceError] = useState<string | null>(null)
-  const [isMac, setIsMac] = useState(false)
+  // OS detection for the keyboard shortcut hint; never changes after mount.
+  const [isMac] = useState(() => navigator.userAgent.indexOf('Mac') !== -1)
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
   // Text already in the textarea when recording starts; dictation appends to it.
   const voiceBaseRef = useRef('')
-
-  // Detect OS for keyboard shortcut hint
-  useEffect(() => {
-    setIsMac(navigator.userAgent.indexOf('Mac') !== -1)
-  }, [])
 
   const {
     isSupported: voiceSupported,
@@ -85,6 +90,11 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
     }
   }, [transcript, interimTranscript])
 
+  // Report the draft upward so it survives navigating away and back
+  useEffect(() => {
+    onInputChange?.(input)
+  }, [input, onInputChange])
+
   // Walk through the loading messages while the AI is parsing
   useEffect(() => {
     if (!isLoading) return
@@ -95,12 +105,16 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
     return () => clearInterval(interval)
   }, [isLoading])
 
-  // Show speech errors as voice error messages
-  useEffect(() => {
+  // Show speech errors as voice error messages. Adjusting state during render
+  // (keyed on the previous hook value) avoids an extra effect-driven render and
+  // still lets the user dismiss the message independently of the hook's error.
+  const [lastSpeechError, setLastSpeechError] = useState(speechError)
+  if (speechError !== lastSpeechError) {
+    setLastSpeechError(speechError)
     if (speechError && speechError !== 'not-supported') {
       setVoiceError(voiceErrorMessage(speechError))
     }
-  }, [speechError])
+  }
 
   const handleSubmit = () => {
     const trimmed = input.trim()
@@ -155,10 +169,7 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
   }
 
   return (
-    <div
-      className="min-h-full flex items-center justify-center p-6"
-      style={{ background: 'linear-gradient(to bottom right, var(--t-bg-start), var(--t-bg-end))' }}
-    >
+    <div className="app-bg flex items-center justify-center p-5 sm:p-6">
       <div className="w-full max-w-xl">
         {/* Weekly day strip above the card */}
         {weekDays && weekDays.length > 0 && onDayClick && (
@@ -166,71 +177,98 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
         )}
 
         {/* Main card */}
-        <div
-          className="rounded-3xl px-8 py-8 sm:px-10 sm:py-10 relative"
-          style={{ backgroundColor: 'var(--t-card)', boxShadow: 'var(--t-shadow-card)', border: '1px solid var(--t-card-border)' }}
-        >
-          {/* Settings gear */}
-          {onOpenSettings && (
-            <button
-              onClick={onOpenSettings}
-              className="absolute top-5 right-5 w-8 h-8 flex items-center justify-center rounded-full transition-colors duration-150"
-              style={{ color: 'var(--t-text-faint)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--t-text-light)'
-                e.currentTarget.style.backgroundColor = 'var(--t-border-light)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--t-text-faint)'
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-              aria-label="Settings"
-              title="Settings"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
-          )}
+        <div className="glass-card px-6 py-8 sm:px-10 sm:py-10 relative">
+          {/* Top-right toolbar */}
+          <div className="absolute top-4 right-4 flex items-center gap-0.5">
+            {onViewHistory && (
+              <button
+                onClick={onViewHistory}
+                disabled={isLoading}
+                className="icon-btn disabled:opacity-40 disabled:pointer-events-none"
+                aria-label="View history"
+                title="History"
+              >
+                <HistoryIcon />
+              </button>
+            )}
+            {onOpenSettings && (
+              <button onClick={onOpenSettings} className="icon-btn" aria-label="Settings" title="Settings">
+                <SettingsIcon />
+              </button>
+            )}
+          </div>
 
           {/* Today's theme + Heading */}
-          <div className="text-center mb-8">
-            {todayTheme && (
-              <p
-                className="mb-2 flex items-center justify-center gap-1.5"
-                style={{ color: 'var(--t-text-light)', animation: 'slide-up-fade 300ms ease-out' }}
-              >
-                <span className="text-[28px] leading-none">{todayTheme.emoji}</span>
-                <span className="text-sm font-medium">{todayTheme.name}</span>
-              </p>
-            )}
-            <h1
-              className="text-2xl font-medium leading-relaxed"
-              style={{ color: 'var(--t-text)' }}
-            >
+          <div className="text-center mb-7 px-8">
+            {todayTheme && <TodayThemeChip theme={todayTheme} />}
+            <h1 className="font-display text-[28px] sm:text-[32px] leading-tight font-medium">
               What do you need to get done?
             </h1>
+            <p className="text-sm mt-2" style={{ color: 'var(--t-text-light)' }}>
+              Dump it all out. I'll turn it into a few small tasks.
+            </p>
           </div>
+
+          {/* First-run notice: no Gemini key saved yet */}
+          {needsApiKey && (
+            <div
+              className="surface mb-5 rounded-2xl px-5 py-4"
+              role="status"
+              style={{ animation: 'slide-up-fade 300ms ease-out' }}
+            >
+              <p className="text-sm font-medium flex items-center gap-1.5">
+                <SparklesIcon size={15} style={{ color: 'var(--t-accent)' }} />
+                One quick setup step
+              </p>
+              <p className="text-sm leading-relaxed mt-1" style={{ color: 'var(--t-text-light)' }}>
+                Turning brain dumps into tasks uses Google Gemini, which needs a free API key.
+                Your key stays on this device. For free-tier setup steps, open Settings
+                and choose “Use Gemini’s free tier” below the key field.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {onOpenSettings && (
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="btn btn-primary h-11 px-4 text-sm !rounded-xl"
+                  >
+                    Add key in Settings
+                  </button>
+                )}
+                <a
+                  href={GEMINI_KEY_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center min-h-[44px] text-sm underline underline-offset-2"
+                  style={{ color: 'var(--t-accent)' }}
+                >
+                  Get a free key
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* Error message */}
           {displayError && (
             <div
-              className="mb-5 rounded-xl px-5 py-3.5 flex items-start gap-3"
+              role="alert"
+              className="mb-5 rounded-2xl pl-4 pr-2 py-2.5 flex items-start gap-3"
               style={{
                 backgroundColor: 'var(--t-red-bg)',
                 border: '1px solid var(--t-red-border)',
+                animation: 'slide-up-fade 250ms ease-out',
               }}
             >
-              <span className="shrink-0 mt-0.5" style={{ color: 'var(--t-red)' }}>&#x26A0;&#xFE0F;</span>
-              <p className="text-sm leading-relaxed flex-1" style={{ color: 'var(--t-red-text)' }}>{displayError}</p>
+              <span className="shrink-0 mt-[3px]" style={{ color: 'var(--t-red)' }}>
+                <AlertIcon size={16} />
+              </span>
+              <p className="text-sm leading-relaxed flex-1 py-0.5" style={{ color: 'var(--t-red-text)' }}>{displayError}</p>
               <button
                 onClick={dismissError}
-                className="shrink-0 transition-colors"
-                style={{ color: 'var(--t-red)' }}
+                className="icon-btn icon-btn-danger shrink-0 !w-7 !h-7"
                 aria-label="Dismiss error"
               >
-                &#x2715;
+                <CloseIcon size={14} />
               </button>
             </div>
           )}
@@ -242,6 +280,7 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
+              aria-label="Brain dump"
               placeholder={
                 isListening
                   ? 'Listening... speak your thoughts'
@@ -249,58 +288,28 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
               }
               disabled={isLoading}
               rows={4}
-              className="w-full min-h-[150px] max-h-[300px] resize-none rounded-2xl
-                px-5 py-4 text-base leading-relaxed
-                focus:outline-none focus:ring-2
-                transition-colors duration-200
-                disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: 'var(--t-input-bg)',
-                color: 'var(--t-text)',
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                borderColor: isListening ? 'var(--t-red)' : 'var(--t-border)',
-                ...(isListening ? { boxShadow: '0 0 0 2px rgba(229,115,115,0.1)' } : {}),
-              }}
-              onFocus={(e) => {
-                if (!isListening) {
-                  e.currentTarget.style.borderColor = 'var(--t-focus)'
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(168, 197, 218, 0.2)'
-                }
-              }}
-              onBlur={(e) => {
-                if (!isListening) {
-                  e.currentTarget.style.borderColor = 'var(--t-border)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }
-              }}
+              className={`field w-full min-h-[150px] max-h-[300px] resize-none rounded-2xl
+                px-5 py-4 pr-11 text-base leading-relaxed
+                disabled:opacity-60 disabled:cursor-not-allowed
+                ${isListening ? 'field-recording' : ''}`}
             />
 
             {/* Clear button */}
             {!isEmpty && !isLoading && (
               <button
                 onClick={handleClear}
-                className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center
-                  rounded-full transition-all duration-150"
-                style={{ color: 'var(--t-text-faint)' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--t-text-light)'
-                  e.currentTarget.style.backgroundColor = 'var(--t-border-light)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--t-text-faint)'
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
+                className="icon-btn absolute top-2.5 right-2.5 !w-7 !h-7"
                 aria-label="Clear input"
+                title="Clear"
               >
-                &#x2715;
+                <CloseIcon size={14} />
               </button>
             )}
 
             {/* Character count near limit */}
             {input.length > MAX_INPUT_LENGTH * 0.8 && (
               <span
-                className="absolute bottom-3 right-3 text-[11px] font-mono"
+                className="absolute bottom-3 right-4 text-[11px] font-mono tabular-nums"
                 style={{ color: input.length > MAX_INPUT_LENGTH * 0.95 ? 'var(--t-red)' : 'var(--t-text-faint)' }}
               >
                 {input.length}/{MAX_INPUT_LENGTH}
@@ -309,49 +318,33 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
           </div>
 
           {/* Action buttons row */}
-          <div className="mt-6 flex items-center gap-3">
+          <div className="mt-5 flex items-center gap-3">
             {/* Voice button */}
             {voiceSupported && (
-              <div className="relative">
+              <div className="relative shrink-0">
                 {isListening && (
                   <span
-                    className="absolute inset-0 rounded-full pointer-events-none"
-                    style={{ backgroundColor: 'rgba(229,115,115,0.3)', animation: 'recording-ring 1.5s ease-out infinite' }}
+                    className="absolute inset-0 rounded-2xl pointer-events-none"
+                    style={{ backgroundColor: 'var(--t-red)', opacity: 0.3, animation: 'recording-ring 1.5s ease-out infinite' }}
                   />
                 )}
                 <button
                   onClick={handleVoiceToggle}
                   disabled={isLoading}
                   aria-label={isListening ? 'Stop recording' : 'Start voice recording'}
-                  className="relative w-12 h-12 rounded-full flex items-center justify-center
-                    transition-all duration-200 ease-out shrink-0
-                    focus:outline-none focus:ring-2 focus:ring-offset-2
-                    disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={isListening ? 'Stop recording' : 'Dictate'}
+                  className={`btn relative w-[52px] h-[52px] !rounded-2xl ${isListening ? '' : 'btn-secondary'}`}
                   style={isListening
                     ? {
                         backgroundColor: 'var(--t-red)',
                         color: '#FFFFFF',
-                        boxShadow: '0 2px 12px rgba(229,115,115,0.4)',
+                        boxShadow: '0 6px 18px -4px var(--t-red-border)',
                         animation: 'recording-pulse 1.5s ease-in-out infinite',
                       }
-                    : {
-                        backgroundColor: 'var(--t-neutral-btn-bg)',
-                        color: 'var(--t-text)',
-                      }
+                    : undefined
                   }
                 >
-                  {isListening ? (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <rect x="2" y="2" width="12" height="12" rx="2" />
-                    </svg>
-                  ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="1" width="6" height="12" rx="3" />
-                      <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-                      <line x1="12" y1="19" x2="12" y2="23" />
-                      <line x1="8" y1="23" x2="16" y2="23" />
-                    </svg>
-                  )}
+                  {isListening ? <StopIcon /> : <MicIcon size={20} />}
                 </button>
               </div>
             )}
@@ -360,36 +353,18 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
             <button
               onClick={handleSubmit}
               disabled={isEmpty || isLoading}
-              className="flex-1 rounded-xl py-3.5 px-7 text-base font-medium text-white
-                hover:scale-[1.02] active:scale-[0.99]
-                focus:outline-none focus:ring-2 focus:ring-offset-2
-                transition-all duration-200 ease-out
-                disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
-              style={{
-                background: 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))',
-                boxShadow: `0 2px 12px var(--t-accent-shadow)`,
-              }}
-              onMouseEnter={(e) => {
-                if (!isEmpty && !isLoading) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--t-accent-hover), var(--t-accent-end-hover))'
-                  e.currentTarget.style.boxShadow = '0 4px 16px var(--t-accent-shadow-hover)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to right, var(--t-accent), var(--t-accent-end))'
-                e.currentTarget.style.boxShadow = '0 2px 12px var(--t-accent-shadow)'
-              }}
+              className="btn btn-primary flex-1 h-[52px] !rounded-2xl px-7 text-[15px]"
             >
               {isLoading ? (
-                <span className="inline-flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  {LOADING_MESSAGES[loadingMsgIndex]}
-                </span>
+                <>
+                  <Spinner />
+                  <span aria-live="polite">{LOADING_MESSAGES[loadingMsgIndex]}</span>
+                </>
               ) : (
-                <span>&#x2728; Make tasks</span>
+                <>
+                  <SparklesIcon size={17} />
+                  Make tasks
+                </>
               )}
             </button>
           </div>
@@ -399,10 +374,14 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
             <div className="mt-3 flex items-center justify-center gap-2 text-sm"
               style={{ color: 'var(--t-red)' }}
               role="status" aria-live="polite">
-              <span className="flex gap-0.5">
-                <span style={{ animation: 'dots-bounce 1s ease-in-out infinite' }}>&#x25CF;</span>
-                <span style={{ animation: 'dots-bounce 1s ease-in-out 0.15s infinite' }}>&#x25CF;</span>
-                <span style={{ animation: 'dots-bounce 1s ease-in-out 0.3s infinite' }}>&#x25CF;</span>
+              <span className="flex gap-1" aria-hidden="true">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: 'currentColor', animation: `dots-bounce 1s ease-in-out ${i * 0.15}s infinite` }}
+                  />
+                ))}
               </span>
               <span>Listening...</span>
             </div>
@@ -410,19 +389,9 @@ export default function LandingScreen({ onSubmit, isLoading, error, onDismissErr
 
           {/* Keyboard hint */}
           <p className="text-center text-xs mt-5" style={{ color: 'var(--t-text-faint)' }}>
-            <kbd
-              className="px-1.5 py-0.5 rounded text-[11px] font-mono"
-              style={{ backgroundColor: 'var(--t-kbd-bg)' }}
-            >
-              {isMac ? '⌘' : 'Ctrl'}
-            </kbd>
+            <kbd className="kbd">{isMac ? '⌘' : 'Ctrl'}</kbd>
             {' + '}
-            <kbd
-              className="px-1.5 py-0.5 rounded text-[11px] font-mono"
-              style={{ backgroundColor: 'var(--t-kbd-bg)' }}
-            >
-              Enter
-            </kbd>
+            <kbd className="kbd">Enter</kbd>
             {' to submit'}
           </p>
         </div>

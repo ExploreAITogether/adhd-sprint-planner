@@ -16,6 +16,14 @@
     "fs:default",
     "fs:allow-write-text-file",
     {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://aistudio.google.com/apikey" },
+        { "url": "https://console.cloud.google.com/billing" },
+        { "url": "https://docs.cloud.google.com/billing/docs/how-to/modify-project" }
+      ]
+    },
+    {
       "identifier": "fs:scope",
       "allow": [
         { "path": "$DOWNLOAD/**" },

@@ -1,15 +1,10 @@
 @import "tailwindcss";
+/* Fonts are bundled locally (imported in main.tsx) — the Tauri CSP only
+   allows font-src 'self'. */
 
 @theme {
-  --color-calm-bg-start: #E8E0F0;
-  --color-calm-bg-end: #D6E5F5;
-  --color-calm-card: #FDFBF7;
-  --color-calm-text: #4A4A4A;
-  --color-calm-text-light: #7A7A7A;
-  --color-calm-border: #E5E5E5;
-  --color-calm-focus: #A8C5DA;
-  --color-calm-accent: #6B7BF7;
-  --color-calm-accent-soft: #8B97F8;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
 }
 
 @layer base {
@@ -19,113 +14,486 @@
   }
 
   body {
-    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    color: var(--t-text);
+    background-color: var(--t-bg);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* ── Phase 8: Theme system ── */
+  ::selection {
+    background: var(--t-accent-soft-strong);
+  }
+
+  /* One consistent, visible keyboard focus ring for every control. */
+  :where(button, a, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--t-focus);
+    outline-offset: 2px;
+  }
+
+  /* ── Theme tokens ── */
 
   :root {
     /* Light mode (default) */
-    --t-bg-start: #E8E0F0;
-    --t-bg-end: #D6E5F5;
-    --t-card: #FDFBF7;
+    --t-bg: #F3F0FA;
+    --t-bg-start: #EEE8F8;
+    --t-bg-end: #E4EEF9;
+    --t-aurora-1: rgba(190, 172, 245, 0.55);
+    --t-aurora-2: rgba(160, 205, 245, 0.55);
+    --t-aurora-3: rgba(255, 207, 186, 0.45);
+    --t-aurora-4: rgba(170, 228, 205, 0.40);
+
+    --t-card: rgba(255, 255, 255, 0.72);
+    --t-card-solid: #FBFAFE;
     --t-card-inner: #FFFFFF;
-    --t-text: #4A4A4A;
-    --t-text-light: #7A7A7A;
-    --t-text-faint: #AAAAAA;
-    --t-border: #E5E5E5;
-    --t-border-light: rgba(229, 229, 229, 0.4);
-    --t-focus: #A8C5DA;
-    --t-accent: #7EB5D6;
-    --t-accent-hover: #8FC0DE;
-    --t-accent-end: #6BA5C9;
-    --t-accent-end-hover: #7BB2D3;
-    --t-accent-shadow: rgba(107, 165, 201, 0.3);
-    --t-accent-shadow-hover: rgba(107, 165, 201, 0.4);
-    --t-green: #7BC67E;
-    --t-green-bg: rgba(123, 198, 126, 0.2);
-    --t-red: #E57373;
-    --t-red-bg: #FEF2F2;
-    --t-red-border: rgba(239, 68, 68, 0.2);
-    --t-red-text: rgba(220, 38, 38, 0.8);
+    --t-text: #2D2945;
+    --t-text-light: #625E7E;
+    --t-text-faint: #8E8AA8;
+    --t-border: #E3DFEE;
+    --t-border-light: rgba(120, 110, 170, 0.08);
+    --t-focus: #6B76E8;
+
+    --t-accent: #5B67DE;
+    --t-accent-hover: #6873E6;
+    --t-accent-end: #7F62D6;
+    --t-accent-end-hover: #8C70DE;
+    --t-accent-text: #4B56C8;
+    --t-accent-soft: rgba(91, 103, 222, 0.08);
+    --t-accent-soft-strong: rgba(91, 103, 222, 0.16);
+    --t-accent-shadow: rgba(91, 103, 222, 0.28);
+    --t-accent-shadow-hover: rgba(91, 103, 222, 0.38);
+    --t-accent-glow: rgba(91, 103, 222, 0.30);
+    --t-accent-glow-strong: rgba(91, 103, 222, 0.15);
+
+    --t-green: #45A97C;
+    --t-green-bg: rgba(69, 169, 124, 0.12);
+    --t-green-soft: rgba(69, 169, 124, 0.05);
+    --t-red: #D9606B;
+    --t-red-bg: #FDF1F2;
+    --t-red-border: rgba(217, 96, 107, 0.22);
+    --t-red-text: #B8434F;
+
     --t-input-bg: #FFFFFF;
-    --t-code-bg: #F5F5F5;
-    --t-tag-bg: rgba(107, 123, 247, 0.08);
-    --t-tag-text: rgba(107, 123, 247, 0.7);
-    --t-modal-backdrop: rgba(0, 0, 0, 0.30);
-    --t-modal-bg: #FFFFFF;
-    --t-shadow-card: 0 4px 32px rgba(0, 0, 0, 0.06);
-    --t-shadow-sm: 0 1px 8px rgba(0, 0, 0, 0.04);
-    --t-shadow-sm-hover: 0 2px 12px rgba(0, 0, 0, 0.07);
-    --t-shadow-modal: 0 8px 40px rgba(0, 0, 0, 0.12);
-    --t-progress-bg: #E8E8E8;
-    --t-kbd-bg: rgba(229, 229, 229, 0.4);
-    --t-shimmer: rgba(255, 255, 255, 0.3);
-    --t-toast-bg: #FDFBF7;
-    --t-toast-border: rgba(229, 229, 229, 0.6);
-    --t-toast-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
-    --t-neutral-btn-bg: #F0F0F0;
-    --t-neutral-btn-hover: #E5E5E5;
-    --t-card-border: transparent;
-    --t-card-inner-border: rgba(229, 229, 229, 0.4);
-    --t-modal-border: transparent;
-    --t-accent-glow: rgba(126, 181, 214, 0.3);
-    --t-accent-glow-strong: rgba(126, 181, 214, 0.15);
+    --t-code-bg: #F6F4FB;
+    --t-tag-bg: rgba(91, 103, 222, 0.08);
+    --t-tag-text: #5560C8;
+    --t-modal-backdrop: rgba(36, 30, 70, 0.28);
+    --t-modal-bg: rgba(255, 255, 255, 0.92);
+    --t-shadow-card: 0 1px 2px rgba(45, 41, 69, 0.04), 0 12px 40px -8px rgba(76, 64, 140, 0.16);
+    --t-shadow-sm: 0 1px 2px rgba(45, 41, 69, 0.04), 0 2px 8px rgba(76, 64, 140, 0.05);
+    --t-shadow-sm-hover: 0 1px 2px rgba(45, 41, 69, 0.05), 0 6px 18px rgba(76, 64, 140, 0.10);
+    --t-shadow-lift: 0 18px 40px -10px rgba(76, 64, 140, 0.30);
+    --t-shadow-modal: 0 24px 64px -12px rgba(36, 30, 70, 0.30);
+    --t-progress-bg: rgba(91, 103, 222, 0.10);
+    --t-kbd-bg: rgba(120, 110, 170, 0.10);
+    --t-shimmer: rgba(255, 255, 255, 0.55);
+    --t-toast-bg: rgba(255, 255, 255, 0.92);
+    --t-toast-border: rgba(227, 223, 238, 0.9);
+    --t-toast-shadow: 0 12px 32px -8px rgba(36, 30, 70, 0.25);
+    --t-neutral-btn-bg: rgba(120, 110, 170, 0.08);
+    --t-neutral-btn-hover: rgba(120, 110, 170, 0.14);
+    --t-card-border: rgba(255, 255, 255, 0.8);
+    --t-card-inner-border: rgba(227, 223, 238, 0.7);
+    --t-modal-border: rgba(255, 255, 255, 0.9);
   }
 
   .theme-dark {
-    --t-bg-start: #1A1A2E;
-    --t-bg-end: #16213E;
-    --t-card: #252540;
-    --t-card-inner: #2E2E50;
-    --t-text: #E8E8E8;
-    --t-text-light: #A0A0B8;
-    --t-text-faint: #8585A0;
-    --t-border: #3A3A55;
-    --t-border-light: rgba(58, 58, 85, 0.5);
-    --t-focus: #5A9BC7;
-    --t-accent: #5A9BC7;
-    --t-accent-hover: #6BAAD3;
-    --t-accent-end: #4A8AB7;
-    --t-accent-end-hover: #5A9BC7;
-    --t-accent-shadow: rgba(90, 155, 199, 0.3);
-    --t-accent-shadow-hover: rgba(90, 155, 199, 0.4);
-    --t-green: #7BC67E;
-    --t-green-bg: rgba(123, 198, 126, 0.15);
-    --t-red: #E57373;
-    --t-red-bg: rgba(229, 115, 115, 0.1);
-    --t-red-border: rgba(229, 115, 115, 0.2);
-    --t-red-text: #E8A0A0;
-    --t-input-bg: #2E2E50;
-    --t-code-bg: #1E1E38;
-    --t-tag-bg: rgba(90, 155, 199, 0.12);
-    --t-tag-text: rgba(90, 155, 199, 0.8);
-    --t-modal-backdrop: rgba(0, 0, 0, 0.50);
-    --t-modal-bg: #2A2A48;
-    --t-shadow-card: 0 4px 32px rgba(0, 0, 0, 0.25);
-    --t-shadow-sm: 0 1px 8px rgba(0, 0, 0, 0.15);
-    --t-shadow-sm-hover: 0 2px 12px rgba(0, 0, 0, 0.25);
-    --t-shadow-modal: 0 8px 40px rgba(0, 0, 0, 0.35);
-    --t-progress-bg: #3A3A55;
-    --t-kbd-bg: rgba(58, 58, 85, 0.5);
-    --t-shimmer: rgba(255, 255, 255, 0.1);
-    --t-toast-bg: #2A2A48;
-    --t-toast-border: rgba(58, 58, 85, 0.6);
-    --t-toast-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-    --t-neutral-btn-bg: #3A3A55;
-    --t-neutral-btn-hover: #4A4A65;
-    --t-card-border: rgba(100, 120, 150, 0.25);
-    --t-card-inner-border: rgba(110, 130, 160, 0.2);
-    --t-modal-border: rgba(100, 120, 150, 0.25);
-    --t-accent-glow: rgba(90, 155, 199, 0.45);
-    --t-accent-glow-strong: rgba(90, 155, 199, 0.25);
+    --t-bg: #0E0F22;
+    --t-bg-start: #12132B;
+    --t-bg-end: #0D1A2E;
+    --t-aurora-1: rgba(98, 76, 200, 0.30);
+    --t-aurora-2: rgba(40, 110, 170, 0.26);
+    --t-aurora-3: rgba(150, 70, 140, 0.18);
+    --t-aurora-4: rgba(40, 140, 120, 0.16);
+
+    --t-card: rgba(28, 29, 58, 0.70);
+    --t-card-solid: #1C1D3A;
+    --t-card-inner: #24254A;
+    --t-text: #ECEBFA;
+    --t-text-light: #ABA9CC;
+    --t-text-faint: #8482AA;
+    --t-border: #36376A;
+    --t-border-light: rgba(170, 170, 230, 0.08);
+    --t-focus: #9CA3FF;
+
+    --t-accent: #6670EE;
+    --t-accent-hover: #737CF2;
+    --t-accent-end: #8B6BE6;
+    --t-accent-end-hover: #9878EC;
+    --t-accent-text: #A9AFFF;
+    --t-accent-soft: rgba(140, 150, 255, 0.10);
+    --t-accent-soft-strong: rgba(140, 150, 255, 0.22);
+    --t-accent-shadow: rgba(102, 112, 238, 0.35);
+    --t-accent-shadow-hover: rgba(102, 112, 238, 0.5);
+    --t-accent-glow: rgba(140, 150, 255, 0.40);
+    --t-accent-glow-strong: rgba(140, 150, 255, 0.20);
+
+    --t-green: #5CC495;
+    --t-green-bg: rgba(92, 196, 149, 0.15);
+    --t-green-soft: rgba(92, 196, 149, 0.05);
+    --t-red: #EE7F89;
+    --t-red-bg: rgba(238, 127, 137, 0.10);
+    --t-red-border: rgba(238, 127, 137, 0.25);
+    --t-red-text: #F3A3AA;
+
+    --t-input-bg: #1F2044;
+    --t-code-bg: #17183A;
+    --t-tag-bg: rgba(140, 150, 255, 0.12);
+    --t-tag-text: #B3B8FF;
+    --t-modal-backdrop: rgba(5, 5, 20, 0.55);
+    --t-modal-bg: rgba(30, 31, 62, 0.94);
+    --t-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2), 0 16px 48px -8px rgba(0, 0, 0, 0.45);
+    --t-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
+    --t-shadow-sm-hover: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 18px rgba(0, 0, 0, 0.3);
+    --t-shadow-lift: 0 18px 40px -10px rgba(0, 0, 0, 0.6);
+    --t-shadow-modal: 0 24px 64px -12px rgba(0, 0, 0, 0.6);
+    --t-progress-bg: rgba(140, 150, 255, 0.12);
+    --t-kbd-bg: rgba(170, 170, 230, 0.10);
+    --t-shimmer: rgba(255, 255, 255, 0.18);
+    --t-toast-bg: rgba(36, 37, 74, 0.95);
+    --t-toast-border: rgba(80, 82, 140, 0.6);
+    --t-toast-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.6);
+    --t-neutral-btn-bg: rgba(170, 170, 230, 0.10);
+    --t-neutral-btn-hover: rgba(170, 170, 230, 0.16);
+    --t-card-border: rgba(150, 155, 230, 0.14);
+    --t-card-inner-border: rgba(150, 155, 230, 0.12);
+    --t-modal-border: rgba(150, 155, 230, 0.18);
   }
 
   /* Smooth theme transition */
   html {
     transition: background-color 200ms ease-in-out, color 200ms ease-in-out;
+  }
+}
+
+/* ── Reusable surfaces & controls ──
+   Hover/focus states live here instead of onMouseEnter style mutations. */
+
+@layer components {
+  /* Soft static aurora behind every view. Static on purpose: an animated
+     background under backdrop-blur would cost GPU all day long. */
+  .app-bg {
+    position: relative;
+    isolation: isolate;
+    min-height: 100%;
+    background-color: var(--t-bg);
+  }
+  .app-bg::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(42% 50% at 12% 8%, var(--t-aurora-1), transparent 70%),
+      radial-gradient(40% 45% at 92% 18%, var(--t-aurora-2), transparent 70%),
+      radial-gradient(45% 40% at 85% 95%, var(--t-aurora-3), transparent 70%),
+      radial-gradient(38% 42% at 8% 88%, var(--t-aurora-4), transparent 70%),
+      linear-gradient(160deg, var(--t-bg-start), var(--t-bg-end));
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+    font-variation-settings: "SOFT" 100, "WONK" 0, "opsz" 72;
+    letter-spacing: -0.015em;
+  }
+
+  .glass-card {
+    background-color: var(--t-card);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    backdrop-filter: blur(28px) saturate(150%);
+    border: 1px solid var(--t-card-border);
+    box-shadow: var(--t-shadow-card);
+    border-radius: 28px;
+  }
+
+  .surface {
+    background-color: var(--t-card-inner);
+    border: 1px solid var(--t-card-inner-border);
+    box-shadow: var(--t-shadow-sm);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    border-radius: 14px;
+    transition: transform 180ms ease-out, box-shadow 180ms ease-out,
+      background-color 150ms ease-out, color 150ms ease-out, opacity 150ms ease-out,
+      border-color 150ms ease-out;
+    cursor: pointer;
+    user-select: none;
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    color: #FFFFFF;
+    background-image: linear-gradient(135deg, var(--t-accent), var(--t-accent-end));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 6px 18px -4px var(--t-accent-shadow);
+  }
+  .btn-primary:not(:disabled):hover {
+    background-image: linear-gradient(135deg, var(--t-accent-hover), var(--t-accent-end-hover));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 10px 24px -6px var(--t-accent-shadow-hover);
+    transform: translateY(-1px);
+  }
+  .btn-primary:not(:disabled):active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  .btn-secondary {
+    color: var(--t-text-light);
+    background-color: var(--t-card-inner);
+    border: 1px solid var(--t-border);
+  }
+  .btn-secondary:not(:disabled):hover {
+    color: var(--t-text);
+    border-color: var(--t-accent-soft-strong);
+    box-shadow: var(--t-shadow-sm);
+  }
+
+  .btn-ghost {
+    color: var(--t-text-light);
+    background-color: transparent;
+  }
+  .btn-ghost:not(:disabled):hover {
+    color: var(--t-text);
+    background-color: var(--t-neutral-btn-bg);
+  }
+
+  .btn-soft {
+    color: var(--t-accent-text);
+    background-color: var(--t-accent-soft);
+  }
+  .btn-soft:not(:disabled):hover {
+    background-color: var(--t-accent-soft-strong);
+  }
+
+  .btn-danger {
+    color: var(--t-red-text);
+    background-color: var(--t-red-bg);
+    border: 1px solid var(--t-red-border);
+  }
+  .btn-danger:not(:disabled):hover {
+    border-color: var(--t-red);
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    color: var(--t-text-faint);
+    transition: background-color 150ms ease-out, color 150ms ease-out;
+    cursor: pointer;
+  }
+  .icon-btn:hover {
+    color: var(--t-text);
+    background-color: var(--t-neutral-btn-bg);
+  }
+  .icon-btn-danger:hover {
+    color: var(--t-red);
+    background-color: var(--t-red-bg);
+  }
+
+  /* Text inputs & textareas */
+  .field {
+    background-color: var(--t-input-bg);
+    color: var(--t-text);
+    border: 1px solid var(--t-border);
+    transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+  }
+  .field::placeholder {
+    color: var(--t-text-faint);
+  }
+  .field:focus,
+  .field:focus-visible {
+    outline: none;
+    border-color: var(--t-focus);
+    box-shadow: 0 0 0 4px var(--t-accent-soft-strong);
+  }
+  .field-recording,
+  .field-recording:focus {
+    border-color: var(--t-red);
+    box-shadow: 0 0 0 4px var(--t-red-bg);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 500;
+    padding: 0.3rem 0.55rem;
+    border-radius: 9999px;
+    color: var(--t-tag-text);
+    background-color: var(--t-tag-bg);
+    transition: background-color 150ms ease-out;
+  }
+  button.chip:hover {
+    background-color: var(--t-accent-soft-strong);
+  }
+
+  .kbd {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    background-color: var(--t-kbd-bg);
+    border: 1px solid var(--t-border-light);
+  }
+
+  /* Emoji tile used on tasks and day themes */
+  .emoji-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 12px;
+    font-size: 1.15rem;
+    line-height: 1;
+    background-color: var(--t-accent-soft);
+  }
+
+  .divider {
+    height: 1px;
+    background-color: var(--t-border);
+    opacity: 0.7;
+  }
+
+  /* Segmented control */
+  .segmented {
+    display: inline-flex;
+    padding: 4px;
+    gap: 2px;
+    border-radius: 14px;
+    background-color: var(--t-neutral-btn-bg);
+  }
+  .segmented > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--t-text-light);
+    transition: background-color 150ms ease-out, color 150ms ease-out, box-shadow 150ms ease-out;
+  }
+  .segmented > button:hover {
+    color: var(--t-text);
+  }
+  .segmented > button[aria-pressed="true"] {
+    color: var(--t-text);
+    background-color: var(--t-card-inner);
+    box-shadow: var(--t-shadow-sm);
+  }
+
+  /* Toasts */
+  .toast {
+    position: fixed;
+    left: 50%;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: calc(100vw - 2rem);
+    padding: 0.7rem 0.8rem 0.7rem 1.1rem;
+    border-radius: 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--t-text);
+    background-color: var(--t-toast-bg);
+    border: 1px solid var(--t-toast-border);
+    box-shadow: var(--t-toast-shadow);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    transform: translateX(-50%);
+    animation: toast-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Modals */
+  .modal-panel {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 24px;
+    background-color: var(--t-modal-bg);
+    border: 1px solid var(--t-modal-border);
+    box-shadow: var(--t-shadow-modal);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    backdrop-filter: blur(24px) saturate(150%);
+  }
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background-color: var(--t-modal-backdrop);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+  }
+
+  /* Strikethrough drawn as a background so it follows wrapped lines. */
+  .strike {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 55%;
+    background-size: 100% 1.5px;
+  }
+  .strike-animate {
+    animation: strike-draw 320ms ease-out 80ms both;
+  }
+
+  .task-card {
+    --task-bg: var(--t-card-inner);
+    background-color: var(--task-bg);
+    border: 1px solid var(--t-card-inner-border);
+    box-shadow: var(--t-shadow-sm);
+    transition: box-shadow 180ms ease-out, border-color 180ms ease-out, background-color 200ms ease-out;
+  }
+  .task-card:hover {
+    box-shadow: var(--t-shadow-sm-hover);
+    border-color: var(--t-border);
+  }
+  .task-card[data-completed="true"] {
+    --task-bg: var(--t-card-solid);
+    box-shadow: none;
+  }
+  .task-card[data-dragging="true"] {
+    box-shadow: var(--t-shadow-lift);
+    border-color: var(--t-accent-glow);
+  }
+
+  /* Task-card action buttons float over the title's end on hover so they
+     never reserve space (which used to force early line wraps). */
+  .task-actions {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.25rem 0.25rem 0.25rem 1.75rem;
+    transform: translateY(-50%);
+    background: linear-gradient(to right, transparent, var(--task-bg, var(--t-card-inner)) 1.5rem);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms ease-out;
+  }
+  .group:hover .task-actions,
+  .group:focus-within .task-actions {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
@@ -143,24 +511,24 @@
 }
 
 @keyframes check-burst {
-  0% { transform: scale(1); opacity: 0.5; }
-  100% { transform: scale(2.6); opacity: 0; }
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.4); opacity: 0; }
 }
 
-@keyframes strikethrough {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+@keyframes strike-draw {
+  from { background-size: 0% 1.5px; }
+  to { background-size: 100% 1.5px; }
 }
 
 @keyframes card-complete {
   0% { transform: scale(1); }
-  30% { transform: scale(0.98); }
+  30% { transform: scale(0.985); }
   100% { transform: scale(1); }
 }
 
 @keyframes float-up {
-  0% { transform: translateY(0) scale(1); opacity: 0.7; }
-  100% { transform: translateY(-54px) scale(0); opacity: 0; }
+  0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 0.9; }
+  100% { transform: translateY(-80px) scale(0.2) rotate(180deg); opacity: 0; }
 }
 
 @keyframes shimmer {
@@ -173,31 +541,26 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes gentle-pulse {
-  0%, 100% { box-shadow: 0 2px 12px rgba(107,165,201,0.3); }
-  50% { box-shadow: 0 4px 24px rgba(107,165,201,0.5); }
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px) scale(0.98); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
 
-@keyframes day-glow-pulse {
-  0%, 100% {
-    box-shadow:
-      0 0 0 2px var(--t-accent-glow),
-      0 0 12px var(--t-accent-glow),
-      0 0 20px var(--t-accent-glow-strong);
-  }
-  50% {
-    box-shadow:
-      0 0 0 2px var(--t-accent-glow-strong),
-      0 0 8px var(--t-accent-glow-strong),
-      0 0 14px transparent;
-  }
+@keyframes gentle-pulse {
+  0%, 100% { box-shadow: 0 6px 18px -4px var(--t-accent-shadow); }
+  50% { box-shadow: 0 10px 30px -4px var(--t-accent-shadow-hover); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(0.85); opacity: 0.5; }
+  50% { transform: scale(1); opacity: 1; }
 }
 
 /* ── Phase 5: voice recording animations ── */
 
 @keyframes recording-pulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+  50% { transform: scale(1.06); }
 }
 
 @keyframes recording-ring {
@@ -217,7 +580,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Phase 7: help prompt modal animations ── */
+/* ── Phase 7: modal animations ── */
 
 @keyframes modal-fade-in {
   from { opacity: 0; }
@@ -230,13 +593,13 @@
 }
 
 @keyframes modal-scale-in {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from { transform: translateY(8px) scale(0.97); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 @keyframes modal-scale-out {
   from { transform: scale(1); opacity: 1; }
-  to { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(0.97); opacity: 0; }
 }
 
 /* ── Phase 8: settings toggle animation ── */
@@ -255,10 +618,19 @@
   100% { opacity: 0; transform: translateX(40px); max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; }
 }
 
-/* Touch devices: always show action buttons and drag handles */
+/* Touch devices: always show action buttons and drag handles. With no hover,
+   the actions sit in normal flow so they never cover the task title. */
 @media (hover: none) {
   .task-action-touch {
     opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  .task-actions {
+    position: static;
+    transform: none;
+    padding: 0;
+    background: none;
+    flex-shrink: 0;
   }
 }
 

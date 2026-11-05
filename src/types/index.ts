@@ -22,6 +22,8 @@ export interface Settings {
   sound_enabled: boolean;
   theme: 'light' | 'dark' | 'system';
   export_path: string;
+  /** User-supplied Gemini API key (bring-your-own-key). null until set in Settings. */
+  api_key: string | null;
 }
 
 export interface DayTheme {

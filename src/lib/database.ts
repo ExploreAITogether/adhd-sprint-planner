@@ -53,7 +53,8 @@ export async function initDatabase(): Promise<void> {
       id INTEGER PRIMARY KEY CHECK (id = 1),
       sound_enabled INTEGER NOT NULL DEFAULT 1,
       theme TEXT NOT NULL DEFAULT 'system',
-      export_path TEXT NOT NULL DEFAULT ''
+      export_path TEXT NOT NULL DEFAULT '',
+      api_key TEXT
     )
   `);
 
@@ -89,6 +90,14 @@ export async function initDatabase(): Promise<void> {
       await database.execute('UPDATE tasks SET position = $1 WHERE id = $2', [pos, task.id]);
       sprintPositions.set(task.sprint_id, pos + 1);
     }
+  } catch {
+    // Column already exists, ignore
+  }
+
+  // Migration: add api_key column to settings for databases created before
+  // the bring-your-own-key flow. Existing rows get NULL (no key set).
+  try {
+    await database.execute('ALTER TABLE settings ADD COLUMN api_key TEXT');
   } catch {
     // Column already exists, ignore
   }
@@ -487,11 +496,11 @@ export async function getSettings(): Promise<Settings> {
   const database = await getDb();
 
   const rows = await database.select<
-    { sound_enabled: number; theme: string; export_path: string }[]
+    { sound_enabled: number; theme: string; export_path: string; api_key: string | null }[]
   >('SELECT * FROM settings WHERE id = 1');
 
   if (rows.length === 0) {
-    return { sound_enabled: true, theme: 'system', export_path: '' };
+    return { sound_enabled: true, theme: 'system', export_path: '', api_key: null };
   }
 
   const row = rows[0];
@@ -499,6 +508,7 @@ export async function getSettings(): Promise<Settings> {
     sound_enabled: row.sound_enabled === 1,
     theme: parseTheme(row.theme),
     export_path: row.export_path,
+    api_key: row.api_key ? row.api_key : null,
   };
 }
 
@@ -508,7 +518,7 @@ export async function updateSettings(
   const database = await getDb();
 
   const updates: string[] = [];
-  const values: (string | number)[] = [];
+  const values: (string | number | null)[] = [];
   let paramIndex = 1;
 
   if (settings.sound_enabled !== undefined) {
@@ -522,6 +532,12 @@ export async function updateSettings(
   if (settings.export_path !== undefined) {
     updates.push(`export_path = $${paramIndex++}`);
     values.push(settings.export_path);
+  }
+  if (settings.api_key !== undefined) {
+    // Normalize: trim whitespace, store NULL rather than an empty string.
+    const trimmed = settings.api_key?.trim() ?? '';
+    updates.push(`api_key = $${paramIndex++}`);
+    values.push(trimmed.length > 0 ? trimmed : null);
   }
 
   if (updates.length > 0) {
