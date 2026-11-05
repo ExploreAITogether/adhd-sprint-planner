@@ -1,0 +1,202 @@
+<!-- ============================================================
+  ADHD Sprint Planner — tool page
+  Suggested URL: /tools/adhd-sprint-planner/  (child of /tools/)
+  Paste into a single WordPress "Custom HTML" block.
+  Template: full width, no sidebar (same as Flipper's Toolkit).
+  All styles are inline. No <style> block needed.
+
+  BEFORE PUBLISHING, replace:
+    [SCREENSHOT-HERO]      main app screenshot or GIF (brain dump → tasks)
+    [SCREENSHOT-SETTINGS]  Settings modal with the Gemini key field
+    [SCREENSHOT-MAC]       macOS "Open Anyway" in Privacy & Security
+    [SCREENSHOT-WIN]       Windows SmartScreen "More info → Run anyway"
+    [BLOG-POST-URL]        the things-i-made post about building it
+  The GitHub links only work once the repo is public.
+============================================================ -->
+
+<div style="max-width: 860px; margin: 0 auto; font-size: 17px; line-height: 1.65;">
+
+  <!-- ===== HERO ===== -->
+  <div style="text-align: center; padding: 1.5rem 0 2rem;">
+    <span style="display: inline-block; background: rgba(51,214,218,0.2); color: #1a9ea2; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 1rem;">Free · Open source · No account</span>
+    <h1 style="font-size: 2.4rem; line-height: 1.15; margin: 0 0 0.75rem; color: #403F63;">ADHD Sprint Planner</h1>
+    <p style="font-size: 1.25rem; color: #555; margin: 0 auto 1.5rem; max-width: 620px;">Dump everything in your head into one box. AI turns it into one to five clear tasks. Check them off with sounds and confetti.</p>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 0.75rem;">
+      <a href="https://github.com/ExploreAITogether/adhd-sprint-planner/releases/latest" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: linear-gradient(135deg, #33D6DA 0%, #403F63 100%); color: #fff; text-decoration: none; padding: 14px 26px; border-radius: 10px; font-weight: 600; font-size: 16px;"> Download for macOS</a>
+      <a href="https://github.com/ExploreAITogether/adhd-sprint-planner/releases/latest" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: linear-gradient(135deg, #33D6DA 0%, #403F63 100%); color: #fff; text-decoration: none; padding: 14px 26px; border-radius: 10px; font-weight: 600; font-size: 16px;">⊞ Download for Windows</a>
+    </div>
+    <p style="font-size: 13px; color: #777; margin: 0;">Both buttons open the latest release on GitHub. Mac: grab the <code>.dmg</code>. Windows: grab the <code>-setup.exe</code>. Version 1.1 and later.</p>
+  </div>
+
+  <div style="margin: 0 0 2.5rem; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(64,63,99,0.15);">
+    <img src="[SCREENSHOT-HERO]" alt="ADHD Sprint Planner showing a brain dump turned into five tasks with emojis and tags" style="display: block; width: 100%; height: auto;">
+  </div>
+
+  <!-- ===== WHY ===== -->
+  <h2 style="color: #403F63; font-size: 1.7rem; margin: 2.5rem 0 0.75rem;">Why I built it</h2>
+  <p>I have ADHD. The hardest part of my day is not doing the work. It is the ten minutes before, when everything I need to do is a tangled cloud and I cannot pick a thread. Every planner I tried wanted me to already know my tasks, sort them into projects, and set due dates. By then I had closed the app.</p>
+  <p>So I made the opposite. One text box. Type or talk into it like you would to a friend. The AI pulls out the real tasks, caps them at five so the list never becomes a wall, and gets out of the way. Finishing one feels good on purpose.</p>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <h2 style="color: #403F63; font-size: 1.7rem; margin: 2.5rem 0 1rem;">How it works</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 1rem;">
+    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px;">
+      <div style="font-size: 2rem; line-height: 1; margin-bottom: 10px;">🧠</div>
+      <strong style="color: #403F63;">1. Dump</strong>
+      <p style="margin: 6px 0 0; font-size: 15px; color: #555;">Type or hit the mic and ramble. Half sentences are fine. "Email Sarah, the thing with the car, groceries maybe, finish the deck" all works.</p>
+    </div>
+    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px;">
+      <div style="font-size: 2rem; line-height: 1; margin-bottom: 10px;">✨</div>
+      <strong style="color: #403F63;">2. Sort</strong>
+      <p style="margin: 6px 0 0; font-size: 15px; color: #555;">Gemini turns it into one to five clear tasks, each with an emoji and tags. Never more than five. Drag to reorder if it guessed the priority wrong.</p>
+    </div>
+    <div style="background: #f9f9f9; border-radius: 12px; padding: 20px;">
+      <div style="font-size: 2rem; line-height: 1; margin-bottom: 10px;">🎉</div>
+      <strong style="color: #403F63;">3. Finish</strong>
+      <p style="margin: 6px 0 0; font-size: 15px; color: #555;">Check tasks off with a chime and a burst of confetti. Stuck on one? "Help Me" writes a prompt you can paste into Claude or ChatGPT.</p>
+    </div>
+  </div>
+
+  <h3 style="color: #403F63; font-size: 1.25rem; margin: 2rem 0 0.5rem;">Also in the box</h3>
+  <ul style="padding-left: 1.3rem; margin: 0;">
+    <li><strong>Weekly themes.</strong> Give each weekday an emoji and a focus, like "📝 Writing Wednesday". It shows above the box so you start in the right headspace.</li>
+    <li><strong>History you can search.</strong> Every sprint is saved. Filter by tag, search by word, export to Markdown.</li>
+    <li><strong>Calm by design.</strong> Soft gradients, light and dark modes, gentle animations. Sounds can be switched off.</li>
+    <li><strong>Hotkey friendly.</strong> Launch it again and it brings the open window forward instead of opening a second copy. Works nicely on a Stream Deck button.</li>
+  </ul>
+
+  <!-- ===== FIRST LAUNCH ===== -->
+  <h2 style="color: #403F63; font-size: 1.7rem; margin: 2.5rem 0 0.5rem;">First launch: three steps</h2>
+  <p style="margin-top: 0;">It takes about three minutes. The only setup is a free AI key, which you keep. I never see it.</p>
+
+  <div style="border-left: 4px solid #33D6DA; padding: 4px 0 4px 20px; margin: 1.5rem 0;">
+    <h3 style="color: #403F63; font-size: 1.2rem; margin: 0 0 0.5rem;">Step 1 · Install and open it</h3>
+    <p style="margin: 0 0 0.75rem;">The app is not signed with an Apple or Microsoft certificate yet, because that costs more per year than this free tool earns. So your computer will warn you once. Here is what to click.</p>
+    <p style="margin: 0 0 0.5rem;"><strong>Mac:</strong> open the <code>.dmg</code> and drag the app to Applications. Double-click it. macOS will say it cannot verify the developer. Click <em>Done</em>, then open <strong>System Settings → Privacy &amp; Security</strong>, scroll down, and click <strong>Open Anyway</strong>. You only do this once.</p>
+    <img src="[SCREENSHOT-MAC]" alt="macOS Privacy and Security settings showing the Open Anyway button" style="display: block; width: 100%; max-width: 560px; height: auto; border-radius: 10px; border: 1px solid #ddd; margin: 0.5rem 0 1rem;">
+    <p style="margin: 0 0 0.5rem;"><strong>Windows:</strong> run the <code>-setup.exe</code>. If a blue SmartScreen box appears, click <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
+    <img src="[SCREENSHOT-WIN]" alt="Windows SmartScreen dialog with More info expanded and Run anyway visible" style="display: block; width: 100%; max-width: 560px; height: auto; border-radius: 10px; border: 1px solid #ddd; margin: 0.5rem 0 0;">
+  </div>
+
+  <div style="border-left: 4px solid #33D6DA; padding: 4px 0 4px 20px; margin: 1.5rem 0;">
+    <h3 style="color: #403F63; font-size: 1.2rem; margin: 0 0 0.5rem;">Step 2 · Get a free Gemini key</h3>
+    <p style="margin: 0 0 0.5rem;">The AI parsing runs on Google's Gemini. Google gives everyone a free key with a generous daily allowance, far more than a planner needs.</p>
+    <ol style="margin: 0; padding-left: 1.3rem;">
+      <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="color: #1a9ea2;">aistudio.google.com/apikey</a> and sign in with any Google account.</li>
+      <li>Click <strong>Create API key</strong>.</li>
+      <li>Copy the key. It starts with <code>AIza</code>.</li>
+    </ol>
+  </div>
+
+  <div style="border-left: 4px solid #33D6DA; padding: 4px 0 4px 20px; margin: 1.5rem 0;">
+    <h3 style="color: #403F63; font-size: 1.2rem; margin: 0 0 0.5rem;">Step 3 · Paste it into Settings</h3>
+    <p style="margin: 0 0 0.75rem;">The app shows a small "Add key" notice on first launch. Click it, or the gear icon in the top right, paste your key into <strong>Gemini API key</strong>, and hit Save. That is it. Start dumping.</p>
+    <img src="[SCREENSHOT-SETTINGS]" alt="ADHD Sprint Planner settings with the Gemini API key field" style="display: block; width: 100%; max-width: 560px; height: auto; border-radius: 10px; border: 1px solid #ddd; margin: 0;">
+  </div>
+
+  <!-- ===== PRIVACY ===== -->
+  <h2 style="color: #403F63; font-size: 1.7rem; margin: 2.5rem 0 0.75rem;">Privacy, in plain words</h2>
+  <p>Everything you type is stored in a single database file on your own computer. There is no account, no sign-up, no telemetry, and no server of mine anywhere in the chain.</p>
+  <p>The one thing that leaves your machine is the text of your brain dump, and a task title when you ask for a "Help Me" prompt. That goes straight from your computer to Google's Gemini API, using your own key and under Google's terms. If you ever want to stop, clear the key in Settings and the app goes fully offline. Your history still works.</p>
+
+  <div style="overflow-x: auto; margin: 1.5rem 0 2rem;">
+  <table style="border-collapse: collapse; width: 100%; min-width: 600px; font-size: 14px;">
+  <thead>
+  <tr>
+    <th style="background: linear-gradient(135deg, #33D6DA 0%, #403F63 100%); color: white; padding: 12px 8px; text-align: left; position: sticky; left: 0; z-index: 2; min-width: 140px;">Requirement</th>
+    <th style="background: linear-gradient(135deg, #33D6DA 0%, #403F63 100%); color: white; padding: 12px 8px; text-align: center;">macOS</th>
+    <th style="background: linear-gradient(135deg, #33D6DA 0%, #403F63 100%); color: white; padding: 12px 8px; text-align: center;">Windows</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; position: sticky; left: 0; background: white; font-weight: bold;">Version</td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center;">10.15 Catalina or newer</td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center;">Windows 10 or 11</td>
+  </tr>
+  <tr style="background: #f9f9f9;">
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; position: sticky; left: 0; background: #f9f9f9; font-weight: bold;">Chip</td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center;">Apple Silicon and Intel, one download</td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center;">64-bit</td>
+  </tr>
+  <tr>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; position: sticky; left: 0; background: white; font-weight: bold;">Account</td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center;"><span style="color: #28a745;">✓</span> None needed</td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center;"><span style="color: #28a745;">✓</span> None needed</td>
+  </tr>
+  <tr style="background: #f9f9f9;">
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; position: sticky; left: 0; background: #f9f9f9; font-weight: bold;">Cost</td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center;"><span style="color: #28a745;">✓</span> Free</td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center;"><span style="color: #28a745;">✓</span> Free</td>
+  </tr>
+  <tr>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; position: sticky; left: 0; background: white; font-weight: bold;">Voice input</td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center;"><span style="color: #28a745;">✓</span></td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center;"><span style="color: #28a745;">✓</span></td>
+  </tr>
+  <tr style="background: #f9f9f9;">
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; position: sticky; left: 0; background: #f9f9f9; font-weight: bold;">Your data lives in</td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center; font-size: 12px;"><code>~/Library/Application Support/com.adhd-sprint-planner.app/</code></td>
+    <td style="padding: 10px 8px; border-bottom: 1px solid #ddd; text-align: center; font-size: 12px;"><code>%APPDATA%\com.adhd-sprint-planner.app\</code></td>
+  </tr>
+  </tbody>
+  </table>
+  </div>
+
+  <!-- ===== FAQ ===== -->
+  <h2 style="color: #403F63; font-size: 1.7rem; margin: 2.5rem 0 1rem;">Quick answers</h2>
+
+  <details style="border-bottom: 1px solid #ddd; padding: 14px 0;">
+    <summary style="cursor: pointer; font-weight: 600; color: #403F63; font-size: 1.05rem;">Is it really free? What's the catch?</summary>
+    <p style="margin: 10px 0 0; color: #444;">Really free, no catch. There is no paid tier, no trial, and no upsell inside the app. The code is open source under the MIT license, so you can read every line. The only cost to you is a Google account for the free Gemini key.</p>
+  </details>
+
+  <details style="border-bottom: 1px solid #ddd; padding: 14px 0;">
+    <summary style="cursor: pointer; font-weight: 600; color: #403F63; font-size: 1.05rem;">Why do I need my own API key?</summary>
+    <p style="margin: 10px 0 0; color: #444;">Because the alternative is me baking my key into the app, which means every download shares one quota and one bad actor can drain it for everyone. Your own key means your usage is yours, nothing routes through me, and the tool stays free forever instead of until my bill gets scary.</p>
+  </details>
+
+  <details style="border-bottom: 1px solid #ddd; padding: 14px 0;">
+    <summary style="cursor: pointer; font-weight: 600; color: #403F63; font-size: 1.05rem;">It says "Gemini rejected the API key." Now what?</summary>
+    <p style="margin: 10px 0 0; color: #444;">Open Settings, click the eye icon to reveal the key, and check for a missing character at either end. If it looks right, make a fresh key in AI Studio and paste that instead. Keys from other services, like OpenAI or Anthropic, will not work here.</p>
+  </details>
+
+  <details style="border-bottom: 1px solid #ddd; padding: 14px 0;">
+    <summary style="cursor: pointer; font-weight: 600; color: #403F63; font-size: 1.05rem;">It says "Slow down! Take a breath." Is it broken?</summary>
+    <p style="margin: 10px 0 0; color: #444;">No. That is Google's free-tier rate limit. Wait a minute and try again. It almost never happens in normal use.</p>
+  </details>
+
+  <details style="border-bottom: 1px solid #ddd; padding: 14px 0;">
+    <summary style="cursor: pointer; font-weight: 600; color: #403F63; font-size: 1.05rem;">Does it work offline?</summary>
+    <p style="margin: 10px 0 0; color: #444;">Your history, settings, and existing sprints all work offline. Turning a new brain dump into tasks needs an internet connection, because that part is the AI.</p>
+  </details>
+
+  <details style="border-bottom: 1px solid #ddd; padding: 14px 0;">
+    <summary style="cursor: pointer; font-weight: 600; color: #403F63; font-size: 1.05rem;">Is there a phone version or sync?</summary>
+    <p style="margin: 10px 0 0; color: #444;">Not yet. It is desktop only and local only, on purpose. If enough people ask, optional sync is on the ideas list.</p>
+  </details>
+
+  <details style="border-bottom: 1px solid #ddd; padding: 14px 0;">
+    <summary style="cursor: pointer; font-weight: 600; color: #403F63; font-size: 1.05rem;">How do I update it?</summary>
+    <p style="margin: 10px 0 0; color: #444;">Download the newest installer from the same GitHub link and install over the top. Your data and settings stay put. There is no auto-updater yet.</p>
+  </details>
+
+  <details style="border-bottom: 1px solid #ddd; padding: 14px 0;">
+    <summary style="cursor: pointer; font-weight: 600; color: #403F63; font-size: 1.05rem;">Something's broken. Where do I tell you?</summary>
+    <p style="margin: 10px 0 0; color: #444;">Open an issue on <a href="https://github.com/ExploreAITogether/adhd-sprint-planner/issues" target="_blank" rel="noopener noreferrer" style="color: #1a9ea2;">GitHub</a> or use the <a href="https://exploreaitogether.com/support/" style="color: #1a9ea2;">Support page</a>. Tell me your operating system and what you clicked right before it went wrong.</p>
+  </details>
+
+  <!-- ===== BUILD STORY + REPO ===== -->
+  <div style="background: linear-gradient(135deg, rgba(51,214,218,0.12) 0%, rgba(64,63,99,0.08) 100%); border-radius: 14px; padding: 28px; margin: 3rem 0 2rem; text-align: center;">
+    <h2 style="color: #403F63; font-size: 1.5rem; margin: 0 0 0.5rem;">How a non-programmer built this</h2>
+    <p style="margin: 0 auto 1.25rem; max-width: 560px; color: #444;">I wrote the spec, AI coding agents wrote the Rust and React, and a brutally honest AI code reviewer told us both where we were wrong. The full story, including the security mistake I almost shipped, is in the blog post.</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
+      <a href="[BLOG-POST-URL]" style="display: inline-block; background: #403F63; color: #fff; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: 600; font-size: 15px;">Read the build story</a>
+      <a href="https://github.com/ExploreAITogether/adhd-sprint-planner" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #fff; color: #403F63; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: 600; font-size: 15px; border: 2px solid #403F63;">View the code on GitHub</a>
+    </div>
+  </div>
+
+  <p style="text-align: center; font-size: 14px; color: #777;">Part of <a href="https://exploreaitogether.com/tools/" style="color: #1a9ea2;">Free Tools</a> from Explore AI Together. Built with Tauri, React, and Gemini 2.5 Flash. MIT licensed.</p>
+
+</div>
